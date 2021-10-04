@@ -21,7 +21,8 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QFileDialog,
                              QLabel,
                              QLineEdit,
-                             QFormLayout)
+                             QFormLayout,
+                             QSlider)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
 import gp
@@ -127,7 +128,9 @@ class MainWindow(QMainWindow):
 
 
     def save_image(self):
-        ...
+        name, _ = QFileDialog.getSaveFileName(self, 'Save image', "evolved-painting.png")
+        if name is not None and len(name) > 0:
+            self.evolution_params.curr_evolution.save_image(name)
 
     def evolve_new(self):
         ...
@@ -168,12 +171,25 @@ class EvolutionParams(QMainWindow):
         self.input_iterations.textChanged.connect(self.changed_iterations)
         self.form_layout.addRow("Iterations", self.input_iterations)
 
+        # Population size
+        self.input_population_size = QLineEdit()
+        ps_validator = QIntValidator()
+        ps_validator.setBottom(1)
+        self.input_population_size.setValidator(ps_validator)
+        self.input_population_size.show()
+        self.input_population_size.textChanged.connect(self.changed_population_size)
+        self.form_layout.addRow("Population size", self.input_population_size)
+
         # Update frequency
-        self.input_update_freq = QLineEdit()
-        self.input_update_freq.setValidator(QIntValidator(1, 100))
-        self.input_update_freq.show()
-        self.input_update_freq.textChanged.connect(self.changed_update_freq)
-        self.form_layout.addRow("Update image every [%]", self.input_update_freq)
+        self.input_update_freq = QSlider(Qt.Horizontal)
+        self.input_update_freq.setSingleStep(5)
+        self.input_update_freq.setMinimum(1)
+        self.input_update_freq.setMaximum(100)
+        #self.input_update_freq.setValidator(QIntValidator(1, 100))
+        #self.input_update_freq.show()
+        self.input_update_freq.valueChanged[int].connect(self.changed_update_freq)
+        self.input_update_freq_label = QLabel("Update image every 10 %")
+        self.form_layout.addRow(self.input_update_freq_label, self.input_update_freq)
 
         # Set values
         self.set_defaults()
@@ -204,7 +220,10 @@ class EvolutionParams(QMainWindow):
         self.iterations = 200
         self.input_iterations.setText(str(self.iterations))
         self.update_freq = 10
-        self.input_update_freq.setText(str(self.update_freq))
+        self.input_update_freq.setValue(self.update_freq)
+        self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
+        self.population_size = 30
+        self.input_population_size.setText(str(self.population_size))
 
     def ok_pressed(self):
         self.hide()
@@ -213,10 +232,14 @@ class EvolutionParams(QMainWindow):
             self.curr_evolution = gp.Evolution(self, self.parent, self.parent.reference_image)
 
     def changed_update_freq(self, v):
-        self.update_freq = self.check_input_change(self.input_update_freq, v, int, 1, 100)
+        self.update_freq = v
+        self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
 
     def changed_iterations(self, v):
         self.iterations = self.check_input_change(self.input_iterations, v, int, 1, 1_000_000_000)
+
+    def changed_population_size(self, v):
+        self.population_size = self.check_input_change(self.input_population_size, v, int, 1, 1_000_000)
 
     def check_input_change(self, component, value, cast, min, max):
         if len(value) == 0:
