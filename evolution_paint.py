@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
         self.evolution_params = EvolutionParams(self)
         self.reference_image = None
         self.image_label = QLabel(self)
+        self.original_image_label = QLabel(self)
         self.save_image_button = QPushButton("Save", self)
         self.save_image_button.pressed.connect(self.save_image)
         self.save_image_button.hide()
@@ -107,7 +108,7 @@ class MainWindow(QMainWindow):
         self.current_displyed_image = image
         # Resize window
         buttons_width = 5 + self.save_image_button.width() + 5 + self.evolve_again_button.width() + 5 + self.evolve_again_button.width() + 5
-        min_width = image.width()+10 if image.width()+10 > buttons_width else buttons_width
+        min_width = image.width()*2+15 if image.width()*2+15 > buttons_width else buttons_width
         self.resize(min_width, image.height()+10 + self.save_image_button.height() + 5)
         # Hide extra gui
         self.button_upload_image.hide()
@@ -116,6 +117,11 @@ class MainWindow(QMainWindow):
         self.image_label.setPixmap(image)
         self.image_label.resize(image.width(), image.height())
         self.image_label.move(5, 5)
+
+        self.original_image_label.setPixmap(QPixmap(self.reference_image))
+        self.original_image_label.resize(image.width(), image.height())
+        self.original_image_label.move(5+5+image.width(), 5)
+        
         # Display save
         self.save_image_button.move(self.width() - self.save_image_button.width() - 5,
                                     self.height() - self.save_image_button.height() - 5)
@@ -134,6 +140,10 @@ class MainWindow(QMainWindow):
         name, _ = QFileDialog.getSaveFileName(self, 'Save image', "evolved-painting.png")
         if name is not None and len(name) > 0:
             self.evolution_params.curr_evolution.save_image(name)
+
+    def evolution_running(self):
+        self.button_upload_image.setEnabled(False)
+        self.mb_file.setEnabled(False)
 
     def evolve_new(self):
         ...
@@ -184,23 +194,6 @@ class EvolutionParams(QMainWindow):
         self.input_population_size.show()
         self.input_population_size.textChanged.connect(self.changed_population_size)
         self.form_layout.addRow("Population size", self.input_population_size)
-
-        # Seeds
-        self.input_max_seeds = QLineEdit()
-        mxs_validator = QIntValidator()
-        mxs_validator.setRange(1, 1000)
-        self.input_max_seeds.setValidator(mxs_validator)
-        self.input_max_seeds.show()
-        self.input_max_seeds.textChanged.connect(self.changed_max_seeds)
-        self.form_layout.addRow("Maximum seeds", self.input_max_seeds)
-
-        self.input_min_seeds = QLineEdit()
-        ms_validator = QIntValidator()
-        ms_validator.setRange(1, 1000)
-        self.input_min_seeds.setValidator(ms_validator)
-        self.input_min_seeds.show()
-        self.input_min_seeds.textChanged.connect(self.changed_min_seeds)
-        self.form_layout.addRow("Minimum seeds", self.input_min_seeds)
 
         # Elitism
         self.input_elitism = QCheckBox()
@@ -256,8 +249,6 @@ class EvolutionParams(QMainWindow):
         self.iterations = 100
         self.update_freq = 10
         self.population_size = 10
-        self.max_seeds = 100
-        self.min_seeds = 100
         self.elitism = True
         self.crossover_percentage = 50
 
@@ -266,8 +257,6 @@ class EvolutionParams(QMainWindow):
         self.input_update_freq.setValue(self.update_freq)
         self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
         self.input_population_size.setText(str(self.population_size))
-        self.input_max_seeds.setText(str(self.max_seeds))
-        self.input_min_seeds.setText(str(self.min_seeds))
         self.input_elitism.setChecked(self.elitism)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
         self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
@@ -277,6 +266,8 @@ class EvolutionParams(QMainWindow):
         if self.parent.reference_image is not None:
             print("Starting evolution with image "+self.parent.reference_image)
             self.curr_evolution = gp.Evolution(self, self.parent, self.parent.reference_image)
+            self.parent.evolution_running()
+            self.curr_evolution.start_evolution()
 
     def changed_elitism(self):
         self.elitism = not self.elitism
