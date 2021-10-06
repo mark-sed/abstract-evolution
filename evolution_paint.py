@@ -3,10 +3,12 @@
 VIN project
 Uses genetic programming to evolve image into passes in image,
 generating similar images
-
-@author: Marek Sedlacek (xsedla1b)
-@date: September 2021
 """
+__author__ = "Marek Sedlacek (xsedla1b)"
+__date__ = "September 2021"
+__version__ = "0.1.0"
+__email__ = ("xsedla1b@fit.vutbr.cz", "mr.mareksedlacek@gmail.com")
+
 
 import PyQt5
 import sys
@@ -22,7 +24,8 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QLabel,
                              QLineEdit,
                              QFormLayout,
-                             QSlider)
+                             QSlider, 
+                             QCheckBox)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
 import gp
@@ -143,9 +146,11 @@ class EvolutionParams(QMainWindow):
     """
     Window containing sliders and buttons for evolution param settings
     """
+    # TODO: Determine the values based on the image size
 
     def __init__(self, parent=None):
         super(EvolutionParams, self).__init__(parent)
+        self.set_defaults()
         self.parent = parent
         self.setWindowTitle("Evolution parameters")
         #self.resize(600, 400)
@@ -180,6 +185,37 @@ class EvolutionParams(QMainWindow):
         self.input_population_size.textChanged.connect(self.changed_population_size)
         self.form_layout.addRow("Population size", self.input_population_size)
 
+        # Seeds
+        self.input_max_seeds = QLineEdit()
+        mxs_validator = QIntValidator()
+        mxs_validator.setRange(1, 1000)
+        self.input_max_seeds.setValidator(mxs_validator)
+        self.input_max_seeds.show()
+        self.input_max_seeds.textChanged.connect(self.changed_max_seeds)
+        self.form_layout.addRow("Maximum seeds", self.input_max_seeds)
+
+        self.input_min_seeds = QLineEdit()
+        ms_validator = QIntValidator()
+        ms_validator.setRange(1, 1000)
+        self.input_min_seeds.setValidator(ms_validator)
+        self.input_min_seeds.show()
+        self.input_min_seeds.textChanged.connect(self.changed_min_seeds)
+        self.form_layout.addRow("Minimum seeds", self.input_min_seeds)
+
+        # Elitism
+        self.input_elitism = QCheckBox()
+        self.input_elitism.toggled.connect(self.changed_elitism)
+        self.form_layout.addRow("Elitism", self.input_elitism)
+
+        # Crossover percentage
+        self.input_crossover_percentage = QSlider(Qt.Horizontal)
+        self.input_crossover_percentage.setSingleStep(10)
+        self.input_crossover_percentage.setMinimum(1)
+        self.input_crossover_percentage.setMaximum(100)
+        self.input_crossover_percentage.valueChanged[int].connect(self.changed_crossover_percentage)
+        self.input_crossover_percentage_label = QLabel("Crossover 50 %")
+        self.form_layout.addRow(self.input_crossover_percentage_label, self.input_crossover_percentage)
+
         # Update frequency
         self.input_update_freq = QSlider(Qt.Horizontal)
         self.input_update_freq.setSingleStep(5)
@@ -192,7 +228,7 @@ class EvolutionParams(QMainWindow):
         self.form_layout.addRow(self.input_update_freq_label, self.input_update_freq)
 
         # Set values
-        self.set_defaults()
+        self.set_input_defaults()
 
         # Set defaults
         self.defaults_button = QPushButton("Set defaults", self)
@@ -217,13 +253,24 @@ class EvolutionParams(QMainWindow):
         ...
 
     def set_defaults(self):
-        self.iterations = 200
-        self.input_iterations.setText(str(self.iterations))
+        self.iterations = 100
         self.update_freq = 10
+        self.population_size = 10
+        self.max_seeds = 100
+        self.min_seeds = 100
+        self.elitism = True
+        self.crossover_percentage = 50
+
+    def set_input_defaults(self):
+        self.input_iterations.setText(str(self.iterations))
         self.input_update_freq.setValue(self.update_freq)
         self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
-        self.population_size = 30
         self.input_population_size.setText(str(self.population_size))
+        self.input_max_seeds.setText(str(self.max_seeds))
+        self.input_min_seeds.setText(str(self.min_seeds))
+        self.input_elitism.setChecked(self.elitism)
+        self.input_crossover_percentage.setValue(self.crossover_percentage)
+        self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
 
     def ok_pressed(self):
         self.hide()
@@ -231,12 +278,25 @@ class EvolutionParams(QMainWindow):
             print("Starting evolution with image "+self.parent.reference_image)
             self.curr_evolution = gp.Evolution(self, self.parent, self.parent.reference_image)
 
+    def changed_elitism(self):
+        self.elitism = not self.elitism
+
+    def changed_crossover_percentage(self, v):
+        self.crossover_percentage = v
+        self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
+
     def changed_update_freq(self, v):
         self.update_freq = v
         self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
 
     def changed_iterations(self, v):
         self.iterations = self.check_input_change(self.input_iterations, v, int, 1, 1_000_000_000)
+
+    def changed_min_seeds(self, v):
+        self.min_seeds = self.check_input_change(self.input_min_seeds, v, int, 1, self.max_seeds)
+
+    def changed_max_seeds(self, v):
+        self.max_seeds = self.check_input_change(self.input_max_seeds, v, int, self.min_seeds, 1000)
 
     def changed_population_size(self, v):
         self.population_size = self.check_input_change(self.input_population_size, v, int, 1, 1_000_000)
@@ -255,11 +315,18 @@ class EvolutionParams(QMainWindow):
         return value
 
 
+def simulate_open(win, file):
+    win.reference_image = file
+    win.evolution_params.ok_pressed() 
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
     win = MainWindow(1024, 600)
+    
+    if len(sys.argv) > 1:
+        simulate_open(win, sys.argv[1])
 
     sys.exit(app.exec_())
