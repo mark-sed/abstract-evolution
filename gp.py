@@ -122,16 +122,6 @@ class Evolution:
         fitness = np.sum(np.absolute(np.subtract(bin_counts1, bin_counts2)))
         return fitness
 
-    def cross2phenos(self, p1, p2):
-        ...
-
-    def crossover(self):
-        for i in range(int(self.params_window.population_size*(self.params_window.crossover_percentage/100))):
-            i2 = randint(0, self.params_window.population_size-1)
-            if i2 == i: # Just skip if its the same one
-                continue 
-            self.cross2phenos(self.fits[i], self.fits[i2])
-
     def start_evolution(self):
         """
         Main evolution cycle, takes parameters from params_window directly
@@ -142,8 +132,6 @@ class Evolution:
         for iter in range(params.iterations):
             self.population.evolve()
             self.fits = [(self.fitness_hist(x, self.ref_img_arr), x) for x in self.population]
-            self.fits.sort(key=lambda x: x[0])
-            self.crossover()
             if (iter+1) % (params.iterations * (params.update_freq/100)) == 0:
                 print("Best fitness: {}".format(self.fits[0][0]))
             
