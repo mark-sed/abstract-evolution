@@ -25,7 +25,8 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QLineEdit,
                              QFormLayout,
                              QSlider, 
-                             QCheckBox)
+                             QCheckBox,
+                             QProgressBar)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
 import gp
@@ -38,7 +39,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self, width, height):
         super(MainWindow, self).__init__()
-        self.resize(width, height)
+        #self.resize(width, height)
+        self.setFixedSize(width, height)
         # Center the screen
         screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
         center = QApplication.desktop().screenGeometry(screen).center()
@@ -57,13 +59,19 @@ class MainWindow(QMainWindow):
         self.evolve_again_button = QPushButton("Evolve again", self)
         self.evolve_again_button.pressed.connect(self.evolve_again)
         self.evolve_again_button.hide()
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setGeometry(0, 0, 400, 25)
+        self.progress_bar.move(self.width()//2-self.progress_bar.width()//2, self.height()-200)
+        self.please_wait_label = QLabel("In silico evolution might take a few minutes...", self)
+        self.please_wait_label.adjustSize()
+        self.please_wait_label.move(self.width()//2-self.please_wait_label.width()//2, self.progress_bar.y()-self.please_wait_label.height()-5)
         self.initUI()
     
     def initUI(self):
         """
         Initialize UI
         """
-        self.setWindowTitle("Evolution paint")
+        self.setWindowTitle("Abstract Evolution")
         
         # Adding a menu bar
         self.menuBar().clear()
@@ -93,6 +101,10 @@ class MainWindow(QMainWindow):
                                       self.height() // 2 - self.button_upload_image.height() // 2)
         self.button_upload_image.pressed.connect(self.upload_image)
 
+        # Hide progress
+        self.progress_bar.hide()
+        self.please_wait_label.hide()
+
         # Show the window
         self.show()
 
@@ -109,7 +121,9 @@ class MainWindow(QMainWindow):
         # Resize window
         buttons_width = 5 + self.save_image_button.width() + 5 + self.evolve_again_button.width() + 5 + self.evolve_again_button.width() + 5
         min_width = image.width()*2+15 if image.width()*2+15 > buttons_width else buttons_width
-        self.resize(min_width, image.height()+10 + self.save_image_button.height() + 5)
+        
+        #self.resize(min_width, image.height()+10 + self.save_image_button.height() + 5)
+        self.setFixedSize(min_width, image.height()+10 + self.save_image_button.height() + 5)
         # Hide extra gui
         self.button_upload_image.hide()
         self.menu_bar.hide()
@@ -123,18 +137,37 @@ class MainWindow(QMainWindow):
         self.original_image_label.move(5+5+image.width(), 5)
         
         # Display save
+        # Button will be shown when image is fully rendered
         self.save_image_button.move(self.width() - self.save_image_button.width() - 5,
                                     self.height() - self.save_image_button.height() - 5)
-        self.save_image_button.show()
+
         # Display evolve again
         self.evolve_again_button.move(self.width() - self.save_image_button.width() - 5*2 - self.evolve_again_button.width(),
                                       self.height() - self.save_image_button.height() - 5)
-        self.evolve_again_button.show()
+
         # Display evolve new
         self.evolve_another_button.move(self.width() - self.save_image_button.width() - 5*3 - self.evolve_again_button.width() - self.evolve_another_button.width(),
                                         self.height() - self.save_image_button.height() - 5)
-        self.evolve_another_button.show()
 
+        self.progress_bar.setGeometry(5, self.evolve_another_button.y()+2, self.evolve_another_button.x()-10, self.evolve_another_button.height()-4)
+        self.progress_bar.repaint()
+        self.please_wait_label.move(self.evolve_another_button.x()+5, self.evolve_another_button.y()+self.evolve_another_button.height()//2-self.please_wait_label.height()//2)
+        self.repaint()
+
+    def update_progress(self, v):
+        if type(v) == str:
+            self.please_wait_label.hide()
+            self.progress_bar.setValue(100)
+            self.progress_bar.setFormat(v)
+            self.save_image_button.show()
+            self.evolve_again_button.show()
+            self.evolve_another_button.show()
+        else:
+            self.please_wait_label.show()
+            self.progress_bar.setValue(v)
+        self.please_wait_label.repaint()
+        self.progress_bar.show()
+        
 
     def save_image(self):
         name, _ = QFileDialog.getSaveFileName(self, 'Save image', "evolved-painting.png")
@@ -195,6 +228,16 @@ class EvolutionParams(QMainWindow):
         self.input_population_size.textChanged.connect(self.changed_population_size)
         self.form_layout.addRow("Population size", self.input_population_size)
 
+        # Randomize colors
+        self.input_randomize_colors = QCheckBox()
+        self.input_randomize_colors.toggled.connect(self.changed_randomize_colors)
+        self.form_layout.addRow("Random colors", self.input_randomize_colors)
+
+        # Unique colors
+        self.input_unique_colors = QCheckBox()
+        self.input_unique_colors.toggled.connect(self.changed_unique_colors)
+        self.form_layout.addRow("Unique colors", self.input_unique_colors)
+
         # Elitism
         self.input_elitism = QCheckBox()
         self.input_elitism.toggled.connect(self.changed_elitism)
@@ -249,6 +292,8 @@ class EvolutionParams(QMainWindow):
         self.iterations = 100
         self.update_freq = 10
         self.population_size = 10
+        self.randomize_colors = False
+        self.unique_colors = False
         self.elitism = True
         self.crossover_percentage = 50
 
@@ -258,6 +303,8 @@ class EvolutionParams(QMainWindow):
         self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
         self.input_population_size.setText(str(self.population_size))
         self.input_elitism.setChecked(self.elitism)
+        self.input_randomize_colors.setChecked(self.randomize_colors)
+        self.input_unique_colors.setChecked(self.unique_colors)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
         self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
 
@@ -265,9 +312,16 @@ class EvolutionParams(QMainWindow):
         self.hide()
         if self.parent.reference_image is not None:
             print("Starting evolution with image "+self.parent.reference_image)
+            self.parent.update_progress(0)
             self.curr_evolution = gp.Evolution(self, self.parent, self.parent.reference_image)
             self.parent.evolution_running()
             self.curr_evolution.start_evolution()
+
+    def changed_randomize_colors(self):
+        self.randomize_colors = not self.randomize_colors
+
+    def changed_unique_colors(self):
+        self.unique_colors = not self.unique_colors
 
     def changed_elitism(self):
         self.elitism = not self.elitism

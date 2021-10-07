@@ -12,9 +12,23 @@ class Phenotype:
     Phenotype of potential image
     """
 
-    def __init__(self, ref_arr):
+    # List of colors used by other phenotypes
+    CLOSED_LIST = []
+
+    def __init__(self, ref_arr, randomize_colors=True, unique_colors=False):
         self.arr = np.zeros_like(ref_arr)
-        pixel = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+        if randomize_colors:
+            # Pick random color
+            pixel = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+            # If uniqueness is required generate new color
+            while unique_colors and pixel in Phenotype.CLOSED_LIST:
+                pixel = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+            Phenotype.CLOSED_LIST.append(pixel)
+        else:
+            pixel = [x for x in ref_arr[randint(0, len(ref_arr)-1)][randint(0, len(ref_arr[0])-1)]]
+            while unique_colors and pixel in Phenotype.CLOSED_LIST:
+                pixel = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+            Phenotype.CLOSED_LIST.append(pixel)
         for i in range(len(self.arr)):
             for a in range(len(self.arr[0])):
                 self.arr[i][a] = pixel
@@ -24,10 +38,10 @@ class Population:
     Population of phenotypes
     """
 
-    def __init__(self, size, ref_arr):
+    def __init__(self, size, ref_arr, randomize_colors, unique_colors):
         self.size = size
         self.ref_arr = ref_arr
-        self.phenotypes = [Phenotype(self.ref_arr) for _ in range(size)]
+        self.phenotypes = [Phenotype(self.ref_arr, randomize_colors, unique_colors) for _ in range(size)]
 
     def __getitem__(self, key):
         """
@@ -46,7 +60,7 @@ class Evolution:
         self.main_window = main_window
         self.ref_img = Image.open(reference_image).convert('RGBA')
         self.ref_img_arr = np.array(self.ref_img)
-        self.population = Population(params_window.population_size, self.ref_img_arr)
+        self.population = Population(params_window.population_size, self.ref_img_arr, params_window.randomize_colors, params_window.unique_colors)
 
     def fitness_hist(self, arr1, arr2):
         """
@@ -85,23 +99,33 @@ class Evolution:
         Main evolution cycle, takes parameters from params_window directly
         """
         params = self.params_window
-        for iter in range(params.iterations):
+        for iteration in range(params.iterations):
             self.fits = [(self.fitness_hist(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
             self.fits.sort(key=lambda x: x[0])
             self.crossover()
-            if (iter+1) % (params.iterations * (params.update_freq/100)) == 0:
+            if (iteration+1) % (params.iterations * (params.update_freq/100)) == 0:
                 print("Best fitness: {}".format(self.fits[0][0]))
-            
-        best = self.fits[0][1].arr
-        self.display_image(best)
-        print("Fitness: {}".format(self.fitness_hist(best, self.ref_img_arr)))
+                self.display_image(self.fits[0][1].arr)
+                params.parent.repaint()
+            params.parent.update_progress(int(iteration/params.iterations*100))
         
+        params.parent.update_progress("Finished")
+        self.best_arr = self.fits[0][1].arr
+        self.display_image(self.best_arr)
+        print("Fitness: {}".format(self.fitness_hist(self.best_arr, self.ref_img_arr)))
 
     def save_image(self, path):
-        img_s = Image.fromarray(self.img_arr, 'RGBA')
+        """
+        Saves self.best phenotype's image as a png file
+        This method is called by the GUI (from the outside)
+        """
+        img_s = Image.fromarray(self.best_arr, 'RGBA')
         img_s.save(path, 'png')
 
     def display_image(self, img):
+        """
+        Displays passed in image to the GUI window
+        """
         qim = ImageQt(Image.fromarray(img, 'RGBA'))
         pix = QtGui.QPixmap.fromImage(qim)
         self.main_window.display_image(pix)
