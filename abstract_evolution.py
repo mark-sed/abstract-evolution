@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
     def upload_image(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"Select file to evolve into", "","Images (*.png *.jpg);;All Files (*)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self,"Select file to evolve into", "","Images (*.png *.jpg *.jpeg);;All Files (*)", options=options)
         if fileName:
             self.reference_image = fileName
             self.evolution_params.show()
@@ -268,7 +268,7 @@ class EvolutionParams(QMainWindow):
 
         # Set defaults
         self.defaults_button = QPushButton("Set defaults", self)
-        self.defaults_button.pressed.connect(self.set_defaults)
+        self.defaults_button.pressed.connect(self.button_set_defaults)
         #self.defaults_button.move(self.width() - self.defaults_button.width() - 10*2 - self.ok_button.width(),
         #                          self.height() - self.defaults_button.height() - 10)
         self.form_layout.addRow(self.defaults_button)
@@ -307,6 +307,10 @@ class EvolutionParams(QMainWindow):
         self.input_unique_colors.setChecked(self.unique_colors)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
         self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
+
+    def button_set_defaults(self):
+        self.set_defaults()
+        self.set_input_defaults()
 
     def ok_pressed(self):
         self.hide()
