@@ -27,10 +27,91 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QSlider, 
                              QCheckBox,
                              QProgressBar,
-                             QComboBox)
+                             QComboBox,
+                             QWidgetAction,
+                             QSizePolicy,
+                             QGridLayout)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
 import gp
+
+class Lang:
+    TEXT = {
+        "save": {
+            "cz": "Uložit",
+            "en": "Save",
+            "fr": "Enregistrer" 
+        },
+        "evolve_new": {
+            "cz": "Nová evoluce",
+            "en": "Evolve new",
+            "fr": "Évoluer nouveau" 
+        },
+        "evolve_again": {
+            "cz": "Evolvuj znovu",
+            "en": "Evolve again",
+            "fr": "Évoluer à nouveau" 
+        },
+        "please_wait": {
+            "cz": "In silico evoluce může trvat několik minut...",
+            "en": "In silico evolution might take a few minutes...",
+            "fr": "L'évolution peut prendre quelques minutes..." 
+        },
+        "file": {
+            "cz": "Soubor",
+            "en": "File",
+            "fr": "Ficher" 
+        },
+        "language": {
+            "cz": "Jazyk",
+            "en": "Language",
+            "fr": "Langue" 
+        },
+        "about": {
+            "cz": "Informace",
+            "en": "About",
+            "fr": "À propos" 
+        },
+        "upload_image": {
+            "cz": "Nahrát obrázek",
+            "en": "Upload an image",
+            "fr": "Télécharger l'image" 
+        },
+        "evolution_parameters": {
+            "cz": "Parametry evoluce",
+            "en": "Evolution parameters",
+            "fr": "Paramètres d'évolution" 
+        },
+        "quit": {
+            "cz": "Konec",
+            "en": "Quit",
+            "fr": "Quitter" 
+        },
+        "select_image": {
+            "cz": "Vyberte obrázek nad kterým provádět evoluci",
+            "en": "Select file to evolve into",
+            "fr": "Sélectionnez une image pour évoluer vers" 
+        },
+        "params_window_title": {
+            "cz": "Parametry evoluce",
+            "en": "Evolution parameters",
+            "fr": "Paramètres d'évolution" 
+        },
+        "about_text": {
+            "cz": "Tady bude něco o tomto",
+            "en": "Here I'll write all about this\nProgram\nAuthor:\nDate:\nGithub link\nVIN",
+            "fr": "Ici c'est pas pret" 
+        }
+    }
+
+    """
+    "": {
+            "cz": "",
+            "en": "",
+            "fr": "" 
+        }
+    """
+
 
 # TODO: Make another and new evolution work
 # TODO: Language support - EN, CZ, FR
@@ -38,6 +119,8 @@ import gp
 # TODO: Icon/Logo
 # TODO: Documentation
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
+# TODO: Add to pip
+# TODO: Add config file to save info
 class MainWindow(QMainWindow):
     """
     Main program windows
@@ -45,6 +128,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, width, height):
         super(MainWindow, self).__init__()
+        self.lang = "en"
         #self.resize(width, height)
         self.setFixedSize(width, height)
         # Center the screen
@@ -55,22 +139,23 @@ class MainWindow(QMainWindow):
         self.reference_image = None
         self.image_label = QLabel(self)
         self.original_image_label = QLabel(self)
-        self.save_image_button = QPushButton("Save", self)
+        self.save_image_button = QPushButton(Lang.TEXT["save"][self.lang], self)
         self.save_image_button.pressed.connect(self.save_image)
         self.save_image_button.hide()
         self.current_displyed_image = None
-        self.evolve_another_button = QPushButton("Evolve new", self)
+        self.evolve_another_button = QPushButton(Lang.TEXT["evolve_new"][self.lang], self)
         self.evolve_another_button.pressed.connect(self.evolve_new)
         self.evolve_another_button.hide()
-        self.evolve_again_button = QPushButton("Evolve again", self)
+        self.evolve_again_button = QPushButton(Lang.TEXT["evolve_again"][self.lang], self)
         self.evolve_again_button.pressed.connect(self.evolve_again)
         self.evolve_again_button.hide()
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setGeometry(0, 0, 400, 25)
         self.progress_bar.move(self.width()//2-self.progress_bar.width()//2, self.height()-200)
-        self.please_wait_label = QLabel("In silico evolution might take a few minutes...", self)
+        self.please_wait_label = QLabel(Lang.TEXT["please_wait"][self.lang], self)
         self.please_wait_label.adjustSize()
         self.please_wait_label.move(self.width()//2-self.please_wait_label.width()//2, self.progress_bar.y()-self.please_wait_label.height()-5)
+        self.about_window = AboutWindow(self)
         self.initUI()
     
     def initUI(self):
@@ -82,26 +167,50 @@ class MainWindow(QMainWindow):
         # Adding a menu bar
         self.menuBar().clear()
         self.menu_bar = self.menuBar()
-        self.mb_file = self.menu_bar.addMenu("File")
+        self.mb_file = self.menu_bar.addMenu(Lang.TEXT["file"][self.lang])
+        self.mb_language = self.menu_bar.addMenu(Lang.TEXT["language"][self.lang])
+
+        #self.about_text = QLabel("About text\n....")
+        #self.about_text_action = QWidgetAction(self)
+        #self.about_text_action.setDefaultWidget(self.about_text)
+        #self.mb_file.addAction(self.about_text_action)
+
+        self.button_about = QAction(Lang.TEXT["about"][self.lang])
+        self.mb_about = self.menu_bar.addAction(self.button_about)
+        self.button_about.triggered.connect(self.show_about)
 
         # Setting up File menu bar
         # Upload image
-        self.mb_upload_image = QAction("Upload image")
+        self.mb_upload_image = QAction(Lang.TEXT["upload_image"][self.lang])
         self.mb_file.addAction(self.mb_upload_image)
         self.mb_upload_image.triggered.connect(self.upload_image)
 
         # Evolution params
-        self.mb_evolution_params = QAction("Evolution parameters")
+        self.mb_evolution_params = QAction(Lang.TEXT["evolution_parameters"][self.lang])
         self.mb_file.addAction(self.mb_evolution_params)
         self.mb_evolution_params.triggered.connect(lambda: self.evolution_params.show())
 
         # Quit
-        self.mb_quit = QAction("Quit")
+        self.mb_quit = QAction(Lang.TEXT["quit"][self.lang])
         self.mb_file.addAction(self.mb_quit)
         self.mb_quit.triggered.connect(lambda: app.exit())
 
+        # Languages
+        self.mb_czech = QAction("Čeština")
+        self.mb_language.addAction(self.mb_czech)
+        self.mb_czech.triggered.connect(lambda: self.change_language("cz"))
+        
+        self.mb_english = QAction("English")
+        self.mb_language.addAction(self.mb_english)
+        self.mb_english.triggered.connect(lambda: self.change_language("en"))
+
+        self.mb_french = QAction("Français")
+        self.mb_language.addAction(self.mb_french)
+        self.mb_french.triggered.connect(lambda: self.change_language("fr"))
+
+
         # Upload image button in the middle of the windows when nothing is open
-        self.button_upload_image = QPushButton("Upload image", self)
+        self.button_upload_image = QPushButton(Lang.TEXT["upload_image"][self.lang], self)
         self.button_upload_image.resize(200, 50)
         self.button_upload_image.move(self.width() // 2 - self.button_upload_image.width() // 2,
                                       self.height() // 2 - self.button_upload_image.height() // 2)
@@ -117,7 +226,7 @@ class MainWindow(QMainWindow):
     def upload_image(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"Select file to evolve into", "","Images (*.png *.jpg *.jpeg);;All Files (*)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self,Lang.TEXT["select_image"][self.lang], "","Images (*.png *.jpg *.jpeg);;All Files (*)", options=options)
         if fileName:
             self.reference_image = fileName
             self.evolution_params.show()
@@ -189,7 +298,65 @@ class MainWindow(QMainWindow):
 
     def evolve_again(self):
         ...
+
+    def change_language(self, name):
+        self.lang = name
+        # Update text
+        self.save_image_button.setText(Lang.TEXT["save"][self.lang])
+        self.save_image_button.adjustSize()
+        self.evolve_another_button.setText(Lang.TEXT["evolve_new"][self.lang])
+        self.evolve_another_button.adjustSize()
+        self.evolve_again_button.setText(Lang.TEXT["evolve_again"][self.lang])
+        self.evolve_again_button.adjustSize()
+        self.please_wait_label.setText(Lang.TEXT["please_wait"][self.lang])
+        self.please_wait_label.adjustSize()
+        self.mb_file.setTitle(Lang.TEXT["file"][self.lang])
+        self.mb_file.adjustSize()
+        self.button_about.setText(Lang.TEXT["about"][self.lang])
+        self.mb_upload_image.setText(Lang.TEXT["upload_image"][self.lang])
+        self.mb_evolution_params.setText(Lang.TEXT["evolution_parameters"][self.lang])
+        self.mb_quit.setText(Lang.TEXT["quit"][self.lang])
+        self.button_upload_image.setText(Lang.TEXT["upload_image"][self.lang])
+        self.evolution_params.change_language(name)
+        self.about_window.change_language(name)
+
+    def show_about(self):
+        self.about_window.show()
             
+
+class AboutWindow(QMainWindow):
+    """
+    Displays info about the project
+    """
+
+    def __init__(self, parent=None):
+        super(AboutWindow, self).__init__(parent)
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMaximizeButtonHint)
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMinimizeButtonHint)
+        # Center the screen
+        self.setWindowTitle(Lang.TEXT["about"][parent.lang])
+        self.setFixedSize(400, 200)
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        center = QApplication.desktop().screenGeometry(screen).center()
+        self.move(center.x() - self.width() // 2, center.y() - self.height() // 2)
+
+        self.main_text = QLabel(Lang.TEXT["about_text"][parent.lang], self)
+        self.main_text.setOpenExternalLinks(True)
+        self.main_text.setAlignment(Qt.AlignCenter)
+        self.main_text.adjustSize()
+        self.main_text.move(self.width()//2 - self.main_text.width()//2, self.height()//2 - self.main_text.height()//2)
+
+        #self.layout = QGridLayout()
+        #self.layout.addWidget(self.main_text, 0, 0)
+        #self.setLayout(self.layout)
+        self.hide()
+
+    def change_language(self, name):
+        self.setWindowTitle(Lang.TEXT["about"][name])
+        self.main_text.setText(Lang.TEXT["about_text"][name])
+        self.main_text.adjustSize()
+        self.main_text.move(self.width()//2 - self.main_text.width()//2, self.height()//2 - self.main_text.height()//2)
+
 
 class EvolutionParams(QMainWindow):
     """
@@ -201,7 +368,7 @@ class EvolutionParams(QMainWindow):
         super(EvolutionParams, self).__init__(parent)
         self.set_defaults()
         self.parent = parent
-        self.setWindowTitle("Evolution parameters")
+        self.setWindowTitle(Lang.TEXT["params_window_title"][parent.lang])
         #self.resize(600, 400)
         # Remove maximize and minimize button
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMaximizeButtonHint)
@@ -345,6 +512,9 @@ class EvolutionParams(QMainWindow):
         self.input_fitness_fun.setCurrentIndex(self.fitness_fun)
         self.input_pm_amount.setText(str(self.pm_amount))
         self.input_pm_size.setText(str(self.pm_size))
+
+    def change_language(self, name):
+        self.setWindowTitle(Lang.TEXT["params_window_title"][name])
 
     def button_set_defaults(self):
         self.set_defaults()
