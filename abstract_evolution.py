@@ -26,12 +26,18 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QFormLayout,
                              QSlider, 
                              QCheckBox,
-                             QProgressBar)
+                             QProgressBar,
+                             QComboBox)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
 import gp
 
-
+# TODO: Make another and new evolution work
+# TODO: Language support - EN, CZ, FR
+# TODO: About menu possibly with help (describe what this is and some tips on what stuff does)
+# TODO: Icon/Logo
+# TODO: Documentation
+# TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 class MainWindow(QMainWindow):
     """
     Main program windows
@@ -252,6 +258,32 @@ class EvolutionParams(QMainWindow):
         self.input_crossover_percentage_label = QLabel("Crossover 50 %")
         self.form_layout.addRow(self.input_crossover_percentage_label, self.input_crossover_percentage)
 
+        # Fitness function
+        self.input_fitness_fun = QComboBox()
+        self.input_fitness_fun.addItem("CH (Color histogram)")
+        self.input_fitness_fun.addItem("RPM (Random point match)")
+        self.input_fitness_fun.addItem("UPM (Uniform point match)")
+        self.input_fitness_fun.currentIndexChanged.connect(self.changed_fitness_fun)
+        self.form_layout.addRow("Fitness function", self.input_fitness_fun)
+
+        # PM values
+        self.input_pm_amount = QLineEdit()
+        pma_validator = QIntValidator()
+        pma_validator.setRange(1, 1000000)
+        self.input_pm_amount.setValidator(pma_validator)
+        self.input_pm_amount.textChanged.connect(self.changed_pm_amount)
+        self.form_layout.addRow("Amount of points", self.input_pm_amount)
+        self.input_pm_amount.setEnabled(False)
+
+
+        self.input_pm_size = QLineEdit()
+        pms_validator = QIntValidator()
+        pms_validator.setRange(1, 100000)
+        self.input_pm_size.setValidator(pms_validator)
+        self.input_pm_size.textChanged.connect(self.changed_pm_size)
+        self.form_layout.addRow("Point size", self.input_pm_size)
+        self.input_pm_size.setEnabled(False)
+
         # Update frequency
         self.input_update_freq = QSlider(Qt.Horizontal)
         self.input_update_freq.setSingleStep(5)
@@ -296,6 +328,9 @@ class EvolutionParams(QMainWindow):
         self.unique_colors = False
         self.elitism = True
         self.crossover_percentage = 50
+        self.fitness_fun = 0
+        self.pm_amount = 100
+        self.pm_size = 3
 
     def set_input_defaults(self):
         self.input_iterations.setText(str(self.iterations))
@@ -307,6 +342,9 @@ class EvolutionParams(QMainWindow):
         self.input_unique_colors.setChecked(self.unique_colors)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
         self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
+        self.input_fitness_fun.setCurrentIndex(self.fitness_fun)
+        self.input_pm_amount.setText(str(self.pm_amount))
+        self.input_pm_size.setText(str(self.pm_size))
 
     def button_set_defaults(self):
         self.set_defaults()
@@ -316,9 +354,10 @@ class EvolutionParams(QMainWindow):
         self.hide()
         if self.parent.reference_image is not None:
             print("Starting evolution with image "+self.parent.reference_image)
+            self.parent.evolution_running()
+            self.parent.repaint()
             self.parent.update_progress(0)
             self.curr_evolution = gp.Evolution(self, self.parent, self.parent.reference_image)
-            self.parent.evolution_running()
             self.curr_evolution.start_evolution()
 
     def changed_randomize_colors(self):
@@ -329,6 +368,21 @@ class EvolutionParams(QMainWindow):
 
     def changed_elitism(self):
         self.elitism = not self.elitism
+
+    def changed_fitness_fun(self, v):
+        self.fitness_fun = v
+        if v == 1 or v == 2:
+            self.input_pm_amount.setEnabled(True)
+            self.input_pm_size.setEnabled(True)
+        else:
+            self.input_pm_amount.setEnabled(False)
+            self.input_pm_size.setEnabled(False)
+
+    def changed_pm_amount(self, v):
+        self.pm_amount = self.check_input_change(self.input_pm_amount, v, int, 1, 1_000_000)
+
+    def changed_pm_size(self, v):
+        self.pm_size = self.check_input_change(self.input_pm_size, v, int, 1, 100_000)
 
     def changed_crossover_percentage(self, v):
         self.crossover_percentage = v

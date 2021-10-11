@@ -71,6 +71,46 @@ class Evolution:
         fitness = np.sum(np.absolute(np.subtract(bin_counts1, bin_counts2)))
         return fitness
 
+    def init_fitness_points(self, ref_arr, amount, size, uniform):
+        """
+        Initializes values needed for fitness_points function
+        @param amount Amount of points for check
+        @param size Size of each point (square, where size is its side)
+        @param uniform If True, then the points will be uniformly distributed
+               otherwise random 
+        """
+        self.pm_size = size
+        if uniform:
+            self.pm_points = []
+            area = len(ref_arr)*len(ref_arr[0])
+            point_area = area / amount
+            length = int(point_area**0.5)
+            i = length//2
+            while i < len(ref_arr):
+                j = length//2
+                while j < len(ref_arr[0]):
+                    self.pm_points.append((i, j))
+                    j+= length
+                i += length
+        else:
+            self.pm_points = [(randint(0, len(ref_arr)-1), randint(0, len(ref_arr[0])-1)) for p in range(amount)]
+            
+
+    def fitness_points(self, arr1, arr2):
+        """
+        Fitness function using points
+        @param arr1 First image array
+        @param arr2 Second image array
+        @warning init_fitness_points needs to be called before this
+        """
+        fit = 0
+        for x, y in self.pm_points:
+            p1 = arr1[x:x+self.pm_size, y:y+self.pm_size]
+            p2 = arr2[x:x+self.pm_size, y:y+self.pm_size]
+            fit += np.sum(np.absolute(np.subtract(p1, p2)))
+        return fit
+
+
     def cross2phenos(self, p1, p2):
         n1 = deepcopy(p1)
         n2 = p2
@@ -78,11 +118,13 @@ class Evolution:
         start_y = randint(0, len(p2.arr[0])-2)
         end_x = randint(start_x, len(p2.arr)-1)
         end_y = randint(start_y, len(p2.arr[0])-1)
-        # TODO: Do i need deepcopy?
+        # FIXME: Do i need deepcopy?
         n1.arr[start_x:end_x,start_y:end_y] = n2.arr[start_x:end_x,start_y:end_y]
         return n1
 
     def crossover(self):
+        # TODO: Add rotation
+        # TODO: Make other than just rect cuts
         new_phenos = []
         for i in range(int(self.params_window.population_size*(self.params_window.crossover_percentage/100))):
             i2 = randint(0, self.params_window.population_size-1)
@@ -99,8 +141,21 @@ class Evolution:
         Main evolution cycle, takes parameters from params_window directly
         """
         params = self.params_window
+        # Init fitness if needed be
+        if params.fitness_fun == 0:  # CH
+            self.fitness_function = self.fitness_hist
+        elif params.fitness_fun == 1:  # RPM
+            self.init_fitness_points(self.ref_img_arr, params.pm_amount, params.pm_size, False)
+            self.fitness_function = self.fitness_points
+        else:
+            self.init_fitness_points(self.ref_img_arr, params.pm_amount, params.pm_size, True)
+            self.fitness_function = self.fitness_points
+        
+        # TODO: Add mutation - Random one shape added to the image
+        # TODO: Randomly add one color phenotypes to the population?
+        # Main loop of evolution
         for iteration in range(params.iterations):
-            self.fits = [(self.fitness_hist(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
+            self.fits = [(self.fitness_function(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
             self.fits.sort(key=lambda x: x[0])
             self.crossover()
             if (iteration+1) % (params.iterations * (params.update_freq/100)) == 0:
@@ -112,7 +167,7 @@ class Evolution:
         params.parent.update_progress("Finished")
         self.best_arr = self.fits[0][1].arr
         self.display_image(self.best_arr)
-        print("Fitness: {}".format(self.fitness_hist(self.best_arr, self.ref_img_arr)))
+        print("Fitness: {}".format(self.fits[0][0]))
 
     def save_image(self, path):
         """
