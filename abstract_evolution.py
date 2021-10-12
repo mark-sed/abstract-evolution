@@ -30,10 +30,12 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QComboBox,
                              QWidgetAction,
                              QSizePolicy,
-                             QGridLayout)
+                             QTextBrowser)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
+import webbrowser
 import gp
+
 
 class Lang:
     TEXT = {
@@ -101,6 +103,86 @@ class Lang:
             "cz": "Tady bude něco o tomto",
             "en": "Here I'll write all about this\nProgram\nAuthor:\nDate:\nGithub link\nVIN",
             "fr": "Ici c'est pas pret" 
+        },
+        "help": {
+            "cz": "Pomoc",
+            "en": "Help",
+            "fr": "Aider" 
+        },
+        "iterations": {
+            "cz": "Iterace",
+            "en": "Iterations",
+            "fr": "Itérations" 
+        },
+        "population_size": {
+            "cz": "Velikost populace",
+            "en": "Population size",
+            "fr": "Taille de la population" 
+        },
+        "random_colors": {
+            "cz": "Náhodné barvy",
+            "en": "Random colors",
+            "fr": "Couleurs aléatoires" 
+        },
+        "unique_colors": {
+            "cz": "Unikátní barvy",
+            "en": "Unique colors",
+            "fr": "Couleurs uniques" 
+        },
+        "elitism": {
+            "cz": "Elitářství",
+            "en": "Elitism",
+            "fr": "Élitisme" 
+        },
+        "crossover": {
+            "cz": "Křížení",
+            "en": "Crossover",
+            "fr": "Croisement" 
+        },
+        "ch": {
+            "cz": "CH (Histogram barev)",
+            "en": "CH (Color histogram)",
+            "fr": "CH (Histogramme des couleurs)" 
+        },
+        "rpm": {
+            "cz": "RPM (Náhodné body)",
+            "en": "RPM (Random point match)",
+            "fr": "RPM (Points aléatoires)" 
+        },
+        "upm": {
+            "cz": "UPM (Rovnoměrně rozprostřené body)",
+            "en": "UPM (Uniform point match)",
+            "fr": "UPM (Points régulièrement espacés)" 
+        },
+        "fitness_function": {
+            "cz": "Fitness funkce",
+            "en": "Fitness function",
+            "fr": "Fonction fitness" 
+        },
+        "amount_of_points": {
+            "cz": "Počet bodů",
+            "en": "Amount of points",
+            "fr": "Nombre de points" 
+        },
+        "point_size": {
+            "cz": "Velikost bodu",
+            "en": "Point size",
+            "fr": "Taille d'un point" 
+        },
+        "update_every": {
+            "cz": "Obnov každých",
+            "en": "Update image every",
+            "fr": "Mise à jour tous les" 
+        },
+        "set_defaults": {
+            "cz": "Výchozí nastavení",
+            "en": "Set defaults",
+            "fr": "Paramètres par défaut" 
+        },
+        "ok": {
+            "cz": "OK",
+            "en": "OK",
+            "fr": "D'accord" 
         }
     }
 
@@ -115,12 +197,15 @@ class Lang:
 
 # TODO: Make another and new evolution work
 # TODO: Language support - EN, CZ, FR
-# TODO: About menu possibly with help (describe what this is and some tips on what stuff does)
+# TODO: About menu
 # TODO: Icon/Logo
 # TODO: Documentation
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Add config file to save info
+# TODO: Add manual as requested in the assignment
+# TODO: Install script
+# TODO: MAKE GIT PUBLIC ON RELEASE!!
 class MainWindow(QMainWindow):
     """
     Main program windows
@@ -178,6 +263,11 @@ class MainWindow(QMainWindow):
         self.button_about = QAction(Lang.TEXT["about"][self.lang])
         self.mb_about = self.menu_bar.addAction(self.button_about)
         self.button_about.triggered.connect(self.show_about)
+
+        # Help
+        self.button_help = QAction(Lang.TEXT["help"][self.lang])
+        self.mb_help = self.menu_bar.addAction(self.button_help)
+        self.button_help.triggered.connect(self.show_help)
 
         # Setting up File menu bar
         # Upload image
@@ -317,11 +407,16 @@ class MainWindow(QMainWindow):
         self.mb_evolution_params.setText(Lang.TEXT["evolution_parameters"][self.lang])
         self.mb_quit.setText(Lang.TEXT["quit"][self.lang])
         self.button_upload_image.setText(Lang.TEXT["upload_image"][self.lang])
-        self.evolution_params.change_language(name)
-        self.about_window.change_language(name)
+        self.evolution_params.hide()
+        self.evolution_params = EvolutionParams(self)
+        self.about_window.hide()
+        self.about_window = AboutWindow(self)
 
     def show_about(self):
         self.about_window.show()
+
+    def show_help(self):
+        webbrowser.open('https://github.com/mark-sed/abstract_evolution/wiki')
             
 
 class AboutWindow(QMainWindow):
@@ -340,22 +435,22 @@ class AboutWindow(QMainWindow):
         center = QApplication.desktop().screenGeometry(screen).center()
         self.move(center.x() - self.width() // 2, center.y() - self.height() // 2)
 
+        """
         self.main_text = QLabel(Lang.TEXT["about_text"][parent.lang], self)
         self.main_text.setOpenExternalLinks(True)
         self.main_text.setAlignment(Qt.AlignCenter)
-        self.main_text.adjustSize()
+        self.main_text.resize(self.width(), self.height())
         self.main_text.move(self.width()//2 - self.main_text.width()//2, self.height()//2 - self.main_text.height()//2)
-
-        #self.layout = QGridLayout()
-        #self.layout.addWidget(self.main_text, 0, 0)
-        #self.setLayout(self.layout)
+        #self.main_text.setStyleSheet("QLabel {background-color: red;}")
+        """
+        self.text_browser = QTextBrowser(self)
+        self.text_browser.resize(self.width(), self.height())
+        self.text_browser.setOpenExternalLinks(True)
+        #self.text_browser.setObjectName("about_box")
+        #self.text_browser.setStyleSheet("padding: 20px; color: red")
+        self.text_browser.append("<div style=\"text-align:center\">Visit <a href=https://github.com/mark-sed/abstract_evolution/wiki>wiki page</a> for more information.</div>")
+        
         self.hide()
-
-    def change_language(self, name):
-        self.setWindowTitle(Lang.TEXT["about"][name])
-        self.main_text.setText(Lang.TEXT["about_text"][name])
-        self.main_text.adjustSize()
-        self.main_text.move(self.width()//2 - self.main_text.width()//2, self.height()//2 - self.main_text.height()//2)
 
 
 class EvolutionParams(QMainWindow):
@@ -390,7 +485,7 @@ class EvolutionParams(QMainWindow):
         self.input_iterations.setValidator(it_validator)
         self.input_iterations.show()
         self.input_iterations.textChanged.connect(self.changed_iterations)
-        self.form_layout.addRow("Iterations", self.input_iterations)
+        self.form_layout.addRow(Lang.TEXT["iterations"][parent.lang], self.input_iterations)
 
         # Population size
         self.input_population_size = QLineEdit()
@@ -399,22 +494,22 @@ class EvolutionParams(QMainWindow):
         self.input_population_size.setValidator(ps_validator)
         self.input_population_size.show()
         self.input_population_size.textChanged.connect(self.changed_population_size)
-        self.form_layout.addRow("Population size", self.input_population_size)
+        self.form_layout.addRow(Lang.TEXT["population_size"][parent.lang], self.input_population_size)
 
         # Randomize colors
         self.input_randomize_colors = QCheckBox()
         self.input_randomize_colors.toggled.connect(self.changed_randomize_colors)
-        self.form_layout.addRow("Random colors", self.input_randomize_colors)
+        self.form_layout.addRow(Lang.TEXT["random_colors"][parent.lang], self.input_randomize_colors)
 
         # Unique colors
         self.input_unique_colors = QCheckBox()
         self.input_unique_colors.toggled.connect(self.changed_unique_colors)
-        self.form_layout.addRow("Unique colors", self.input_unique_colors)
+        self.form_layout.addRow(Lang.TEXT["unique_colors"][parent.lang], self.input_unique_colors)
 
         # Elitism
         self.input_elitism = QCheckBox()
         self.input_elitism.toggled.connect(self.changed_elitism)
-        self.form_layout.addRow("Elitism", self.input_elitism)
+        self.form_layout.addRow(Lang.TEXT["elitism"][parent.lang], self.input_elitism)
 
         # Crossover percentage
         self.input_crossover_percentage = QSlider(Qt.Horizontal)
@@ -422,16 +517,16 @@ class EvolutionParams(QMainWindow):
         self.input_crossover_percentage.setMinimum(1)
         self.input_crossover_percentage.setMaximum(100)
         self.input_crossover_percentage.valueChanged[int].connect(self.changed_crossover_percentage)
-        self.input_crossover_percentage_label = QLabel("Crossover 50 %")
+        self.input_crossover_percentage_label = QLabel(Lang.TEXT["crossover"][parent.lang]+" 50 %")
         self.form_layout.addRow(self.input_crossover_percentage_label, self.input_crossover_percentage)
 
         # Fitness function
         self.input_fitness_fun = QComboBox()
-        self.input_fitness_fun.addItem("CH (Color histogram)")
-        self.input_fitness_fun.addItem("RPM (Random point match)")
-        self.input_fitness_fun.addItem("UPM (Uniform point match)")
+        self.input_fitness_fun.addItem(Lang.TEXT["ch"][parent.lang])
+        self.input_fitness_fun.addItem(Lang.TEXT["rpm"][parent.lang])
+        self.input_fitness_fun.addItem(Lang.TEXT["upm"][parent.lang])
         self.input_fitness_fun.currentIndexChanged.connect(self.changed_fitness_fun)
-        self.form_layout.addRow("Fitness function", self.input_fitness_fun)
+        self.form_layout.addRow(Lang.TEXT["fitness_function"][parent.lang], self.input_fitness_fun)
 
         # PM values
         self.input_pm_amount = QLineEdit()
@@ -439,7 +534,7 @@ class EvolutionParams(QMainWindow):
         pma_validator.setRange(1, 1000000)
         self.input_pm_amount.setValidator(pma_validator)
         self.input_pm_amount.textChanged.connect(self.changed_pm_amount)
-        self.form_layout.addRow("Amount of points", self.input_pm_amount)
+        self.form_layout.addRow(Lang.TEXT["amount_of_points"][parent.lang], self.input_pm_amount)
         self.input_pm_amount.setEnabled(False)
 
 
@@ -448,7 +543,7 @@ class EvolutionParams(QMainWindow):
         pms_validator.setRange(1, 100000)
         self.input_pm_size.setValidator(pms_validator)
         self.input_pm_size.textChanged.connect(self.changed_pm_size)
-        self.form_layout.addRow("Point size", self.input_pm_size)
+        self.form_layout.addRow(Lang.TEXT["point_size"][parent.lang], self.input_pm_size)
         self.input_pm_size.setEnabled(False)
 
         # Update frequency
@@ -459,21 +554,21 @@ class EvolutionParams(QMainWindow):
         #self.input_update_freq.setValidator(QIntValidator(1, 100))
         #self.input_update_freq.show()
         self.input_update_freq.valueChanged[int].connect(self.changed_update_freq)
-        self.input_update_freq_label = QLabel("Update image every 10 %")
+        self.input_update_freq_label = QLabel(Lang.TEXT["update_every"][parent.lang]+" 10 %")
         self.form_layout.addRow(self.input_update_freq_label, self.input_update_freq)
 
         # Set values
         self.set_input_defaults()
 
         # Set defaults
-        self.defaults_button = QPushButton("Set defaults", self)
+        self.defaults_button = QPushButton(Lang.TEXT["set_defaults"][parent.lang], self)
         self.defaults_button.pressed.connect(self.button_set_defaults)
         #self.defaults_button.move(self.width() - self.defaults_button.width() - 10*2 - self.ok_button.width(),
         #                          self.height() - self.defaults_button.height() - 10)
         self.form_layout.addRow(self.defaults_button)
 
         # Ok button
-        self.ok_button = QPushButton("OK", self)
+        self.ok_button = QPushButton(Lang.TEXT["ok"][parent.lang], self)
         self.ok_button.pressed.connect(self.ok_pressed)
         #self.ok_button.move(self.width() - self.ok_button.width() - 10,
         #                    self.height() - self.ok_button.height() - 10)
@@ -502,19 +597,17 @@ class EvolutionParams(QMainWindow):
     def set_input_defaults(self):
         self.input_iterations.setText(str(self.iterations))
         self.input_update_freq.setValue(self.update_freq)
-        self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
+        self.input_update_freq_label.setText(Lang.TEXT["update_every"][self.parent.lang]+" {} %".format(self.update_freq))
         self.input_population_size.setText(str(self.population_size))
         self.input_elitism.setChecked(self.elitism)
         self.input_randomize_colors.setChecked(self.randomize_colors)
         self.input_unique_colors.setChecked(self.unique_colors)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
-        self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
+        self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.crossover_percentage))
         self.input_fitness_fun.setCurrentIndex(self.fitness_fun)
         self.input_pm_amount.setText(str(self.pm_amount))
         self.input_pm_size.setText(str(self.pm_size))
 
-    def change_language(self, name):
-        self.setWindowTitle(Lang.TEXT["params_window_title"][name])
 
     def button_set_defaults(self):
         self.set_defaults()
@@ -523,7 +616,6 @@ class EvolutionParams(QMainWindow):
     def ok_pressed(self):
         self.hide()
         if self.parent.reference_image is not None:
-            print("Starting evolution with image "+self.parent.reference_image)
             self.parent.evolution_running()
             self.parent.repaint()
             self.parent.update_progress(0)
@@ -556,11 +648,11 @@ class EvolutionParams(QMainWindow):
 
     def changed_crossover_percentage(self, v):
         self.crossover_percentage = v
-        self.input_crossover_percentage_label.setText("Crossover {} %".format(self.crossover_percentage))
+        self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.crossover_percentage))
 
     def changed_update_freq(self, v):
         self.update_freq = v
-        self.input_update_freq_label.setText("Update image every {} %".format(self.update_freq))
+        self.input_update_freq_label.setText(Lang.TEXT["update_every"][self.parent.lang]+" {} %".format(self.update_freq))
 
     def changed_iterations(self, v):
         self.iterations = self.check_input_change(self.input_iterations, v, int, 1, 1_000_000_000)
