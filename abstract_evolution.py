@@ -76,7 +76,7 @@ class Lang:
         },
         "upload_image": {
             "cz": "Nahrát obrázek",
-            "en": "Upload an image",
+            "en": "Upload image",
             "fr": "Télécharger l'image" 
         },
         "evolution_parameters": {
@@ -183,9 +183,18 @@ class Lang:
             "cz": "OK",
             "en": "OK",
             "fr": "D'accord" 
+        },
+        "start_evolution": {
+            "cz": "Začít evoluci!",
+            "en": "Start evolution!",
+            "fr": "Commencer l'évolution!" 
+        },
+        "finished": {
+            "cz": "Dokončeno",
+            "en": "Finished",
+            "fr": "Fini" 
         }
     }
-
     """
     "": {
             "cz": "",
@@ -196,7 +205,6 @@ class Lang:
 
 
 # TODO: Make another and new evolution work
-# TODO: Language support - EN, CZ, FR
 # TODO: About menu
 # TODO: Icon/Logo
 # TODO: Documentation
@@ -211,9 +219,15 @@ class MainWindow(QMainWindow):
     Main program windows
     """
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, lang="en"):
+        """
+        Constructor
+        :param width Main window width
+        :param height Main window height
+        :param lang Language in which to display the GUI ("en"/"fr"/"cz"). "en" by default.
+        """
         super(MainWindow, self).__init__()
-        self.lang = "en"
+        self.lang = lang
         #self.resize(width, height)
         self.setFixedSize(width, height)
         # Center the screen
@@ -245,7 +259,7 @@ class MainWindow(QMainWindow):
     
     def initUI(self):
         """
-        Initialize UI
+        Initializes UI
         """
         self.setWindowTitle("Abstract Evolution")
         
@@ -314,6 +328,9 @@ class MainWindow(QMainWindow):
         self.show()
 
     def upload_image(self):
+        """
+        Opens dialog to upload image for evolution
+        """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,Lang.TEXT["select_image"][self.lang], "","Images (*.png *.jpg *.jpeg);;All Files (*)", options=options)
@@ -322,6 +339,10 @@ class MainWindow(QMainWindow):
             self.evolution_params.show()
 
     def display_image(self, image):
+        """
+        Displays image on the main window
+        :param image Image to be displayed
+        """
         self.current_displyed_image = image
         # Resize window
         buttons_width = 5 + self.save_image_button.width() + 5 + self.evolve_again_button.width() + 5 + self.evolve_again_button.width() + 5
@@ -360,6 +381,11 @@ class MainWindow(QMainWindow):
         self.repaint()
 
     def update_progress(self, v):
+        """
+        Updates progress bar
+        :param v Int of the progress value or Str for final text
+        :note If passed in value is Str it is taken as the final text (after 100 %)
+        """
         if type(v) == str:
             self.please_wait_label.hide()
             self.progress_bar.setValue(100)
@@ -375,11 +401,17 @@ class MainWindow(QMainWindow):
         
 
     def save_image(self):
+        """
+        Opens dialog window to save and image (path is passed to evolution_params)
+        """
         name, _ = QFileDialog.getSaveFileName(self, 'Save image', "evolved-painting.png")
         if name is not None and len(name) > 0:
             self.evolution_params.curr_evolution.save_image(name)
 
     def evolution_running(self):
+        """
+        This method is called when evolution is starting to run
+        """
         self.button_upload_image.setEnabled(False)
         self.mb_file.setEnabled(False)
 
@@ -390,6 +422,10 @@ class MainWindow(QMainWindow):
         ...
 
     def change_language(self, name):
+        """
+        Changes GUIs language
+        :param name Abbreviated name of the language (has to be in Lang.TEXT dict)
+        """
         self.lang = name
         # Update text
         self.save_image_button.setText(Lang.TEXT["save"][self.lang])
@@ -413,9 +449,15 @@ class MainWindow(QMainWindow):
         self.about_window = AboutWindow(self)
 
     def show_about(self):
+        """
+        Displays "About" window
+        """
         self.about_window.show()
 
     def show_help(self):
+        """
+        Opens wiki with help info in users browser
+        """
         webbrowser.open('https://github.com/mark-sed/abstract_evolution/wiki')
             
 
@@ -425,6 +467,10 @@ class AboutWindow(QMainWindow):
     """
 
     def __init__(self, parent=None):
+        """
+        Constructor
+        :param parent Window that should be this window's parent
+        """
         super(AboutWindow, self).__init__(parent)
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMaximizeButtonHint)
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMinimizeButtonHint)
@@ -460,6 +506,10 @@ class EvolutionParams(QMainWindow):
     # TODO: Determine the values based on the image size
 
     def __init__(self, parent=None):
+        """
+        Constructor
+        :param parent Window that should be this window's parent
+        """
         super(EvolutionParams, self).__init__(parent)
         self.set_defaults()
         self.parent = parent
@@ -563,26 +613,23 @@ class EvolutionParams(QMainWindow):
         # Set defaults
         self.defaults_button = QPushButton(Lang.TEXT["set_defaults"][parent.lang], self)
         self.defaults_button.pressed.connect(self.button_set_defaults)
-        #self.defaults_button.move(self.width() - self.defaults_button.width() - 10*2 - self.ok_button.width(),
-        #                          self.height() - self.defaults_button.height() - 10)
         self.form_layout.addRow(self.defaults_button)
 
         # Ok button
-        self.ok_button = QPushButton(Lang.TEXT["ok"][parent.lang], self)
-        self.ok_button.pressed.connect(self.ok_pressed)
-        #self.ok_button.move(self.width() - self.ok_button.width() - 10,
-        #                    self.height() - self.ok_button.height() - 10)
-        self.form_layout.addRow(self.ok_button)
+        self.start_evolution_button = QPushButton(Lang.TEXT["start_evolution"][parent.lang], self)
+        self.start_evolution_button.pressed.connect(self.start_evolution_pressed)
+        self.start_evolution_button.setStyleSheet("font-weight: bold;")
+        self.form_layout.addRow(self.start_evolution_button)
 
         wid = QtWidgets.QWidget(self)
         self.setCentralWidget(wid)
         wid.setLayout(self.form_layout)
         self.update()
 
-    def initUI(self):
-        ...
-
     def set_defaults(self):
+        """
+        Sets all evolution parameters to their default values
+        """
         self.iterations = 100
         self.update_freq = 10
         self.population_size = 10
@@ -595,6 +642,10 @@ class EvolutionParams(QMainWindow):
         self.pm_size = 3
 
     def set_input_defaults(self):
+        """
+        Updates GUI's values based in current evolution paramaters
+        This should be called after set_defaults
+        """
         self.input_iterations.setText(str(self.iterations))
         self.input_update_freq.setValue(self.update_freq)
         self.input_update_freq_label.setText(Lang.TEXT["update_every"][self.parent.lang]+" {} %".format(self.update_freq))
@@ -608,12 +659,17 @@ class EvolutionParams(QMainWindow):
         self.input_pm_amount.setText(str(self.pm_amount))
         self.input_pm_size.setText(str(self.pm_size))
 
-
     def button_set_defaults(self):
+        """
+        Sets default evolution parameters and updates GUI to these values
+        """
         self.set_defaults()
         self.set_input_defaults()
 
-    def ok_pressed(self):
+    def start_evolution_pressed(self):
+        """
+        Starts evolution
+        """
         self.hide()
         if self.parent.reference_image is not None:
             self.parent.evolution_running()

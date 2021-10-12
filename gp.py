@@ -5,6 +5,7 @@ from PyQt5 import QtGui
 import random
 from random import randint
 from copy import deepcopy
+from abstract_evolution import Lang
 
 
 class Phenotype:
@@ -153,6 +154,7 @@ class Evolution:
         
         # TODO: Add mutation - Random one shape added to the image
         # TODO: Randomly add one color phenotypes to the population?
+        # TODO: Try incorporating back options for lines as is in lines branch
         # Main loop of evolution
         for iteration in range(params.iterations):
             self.fits = [(self.fitness_function(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
@@ -164,7 +166,7 @@ class Evolution:
                 params.parent.repaint()
             params.parent.update_progress(int(iteration/params.iterations*100))
         
-        params.parent.update_progress("Finished")
+        params.parent.update_progress(Lang.TEXT["finished"][params.parent.lang])
         self.best_arr = self.fits[0][1].arr
         self.display_image(self.best_arr)
         print("Fitness: {}".format(self.fits[0][0]))
