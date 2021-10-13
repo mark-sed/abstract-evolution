@@ -1,3 +1,8 @@
+"""
+Abstract evolution
+Genetic programming unit
+"""
+
 import numpy as np
 from PIL import Image
 from PIL.ImageQt import ImageQt
@@ -17,6 +22,13 @@ class Phenotype:
     CLOSED_LIST = []
 
     def __init__(self, ref_arr, randomize_colors=True, unique_colors=False):
+        """
+        Constructor
+        :param ref_arr Reference image as an numpy array used for fitness
+        :param randomize_colors If True color of the phenotype will be picked at random
+                                otherwise values will be extracted from the reference image
+        :param unique_colors If True then no 2 phenotypes will have the same color
+        """
         self.arr = np.zeros_like(ref_arr)
         if randomize_colors:
             # Pick random color
@@ -34,12 +46,21 @@ class Phenotype:
             for a in range(len(self.arr[0])):
                 self.arr[i][a] = pixel
 
+
 class Population:
     """
     Population of phenotypes
     """
 
     def __init__(self, size, ref_arr, randomize_colors, unique_colors):
+        """
+        Constructor
+        :param size How many phenotypes will there be in one population
+        :param ref_arr Reference image as an array used for the fitness
+        :param randomize_colors If True color of the phenotype will be picked at random
+                                otherwise values will be extracted from the reference image
+        :param unique_colors If True then no 2 phenotypes will have the same color
+        """
         self.size = size
         self.ref_arr = ref_arr
         self.phenotypes = [Phenotype(self.ref_arr, randomize_colors, unique_colors) for _ in range(size)]
@@ -47,6 +68,7 @@ class Population:
     def __getitem__(self, key):
         """
         Returns phenotype's array
+        :param key Key to the phenotype's dict
         """
         return self.phenotypes[key].arr
 
@@ -57,6 +79,12 @@ class Evolution:
     """
 
     def __init__(self, params_window, main_window, reference_image):
+        """
+        Constructor
+        :param params_window Window containing evolution parameters
+        :param main_window Main application window (needed for phenotype rendering)
+        :param reference_image Image used as a reference for evolution
+        """
         self.params_window = params_window
         self.main_window = main_window
         self.ref_img = Image.open(reference_image).convert('RGBA')
@@ -66,6 +94,8 @@ class Evolution:
     def fitness_hist(self, arr1, arr2):
         """
         Calculates fitness based on histograms
+        :param arr1 First image array
+        :param arr2 Second image array
         """
         bin_counts1, _ = np.histogram(arr1.ravel(), bins=256, range=(0, 254))
         bin_counts2, _ = np.histogram(arr2.ravel(), bins=256, range=(0, 254))
@@ -75,9 +105,9 @@ class Evolution:
     def init_fitness_points(self, ref_arr, amount, size, uniform):
         """
         Initializes values needed for fitness_points function
-        @param amount Amount of points for check
-        @param size Size of each point (square, where size is its side)
-        @param uniform If True, then the points will be uniformly distributed
+        :param amount Amount of points for check
+        :param size Size of each point (square, where size is its side)
+        :param uniform If True, then the points will be uniformly distributed
                otherwise random 
         """
         self.pm_size = size
@@ -94,15 +124,14 @@ class Evolution:
                     j+= length
                 i += length
         else:
-            self.pm_points = [(randint(0, len(ref_arr)-1), randint(0, len(ref_arr[0])-1)) for p in range(amount)]
-            
+            self.pm_points = [(randint(0, len(ref_arr)-1), randint(0, len(ref_arr[0])-1)) for p in range(amount)]  
 
     def fitness_points(self, arr1, arr2):
         """
         Fitness function using points
-        @param arr1 First image array
-        @param arr2 Second image array
-        @warning init_fitness_points needs to be called before this
+        :param arr1 First image array
+        :param arr2 Second image array
+        :warning init_fitness_points needs to be called before this
         """
         fit = 0
         for x, y in self.pm_points:
@@ -111,19 +140,26 @@ class Evolution:
             fit += np.sum(np.absolute(np.subtract(p1, p2)))
         return fit
 
-
     def cross2phenos(self, p1, p2):
+        """
+        Crossovers 2 phenotypes creating a new one
+        :param p1 First phenotype to crossover
+        :param p2 Second phenotype to crossover
+        :return New phenotype which is a crossover of p1 and p2
+        """
         n1 = deepcopy(p1)
         n2 = p2
         start_x = randint(0, len(p2.arr)-2)
         start_y = randint(0, len(p2.arr[0])-2)
         end_x = randint(start_x, len(p2.arr)-1)
         end_y = randint(start_y, len(p2.arr[0])-1)
-        # FIXME: Do i need deepcopy?
         n1.arr[start_x:end_x,start_y:end_y] = n2.arr[start_x:end_x,start_y:end_y]
         return n1
 
     def crossover(self):
+        """
+        Performs crossovers on phenotypes in population
+        """
         # TODO: Add rotation
         # TODO: Make other than just rect cuts
         new_phenos = []
@@ -175,6 +211,7 @@ class Evolution:
         """
         Saves self.best phenotype's image as a png file
         This method is called by the GUI (from the outside)
+        :param path Path to where should be the image saved
         """
         img_s = Image.fromarray(self.best_arr, 'RGBA')
         img_s.save(path, 'png')
@@ -182,6 +219,7 @@ class Evolution:
     def display_image(self, img):
         """
         Displays passed in image to the GUI window
+        :param img Image to be displayed
         """
         qim = ImageQt(Image.fromarray(img, 'RGBA'))
         pix = QtGui.QPixmap.fromImage(qim)

@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """
-VIN project
+Abstract evolution
+Made for VIN class at Brno University of Technology
 Uses genetic programming to evolve image into passes in image,
-generating similar images
+generating similar images yet abstract and always unique
 """
 __author__ = "Marek Sedlacek (xsedla1b)"
 __date__ = "September 2021"
@@ -38,6 +39,9 @@ import gp
 
 
 class Lang:
+    """
+    Class holding GUI translations
+    """
     TEXT = {
         "save": {
             "cz": "Uložit",
@@ -212,6 +216,7 @@ class Lang:
 # TODO: Add to pip
 # TODO: Add config file to save info
 # TODO: Add manual as requested in the assignment
+# TODO: Add option to continue evolution with more cycles or even load image on which to continue
 # TODO: Install script
 # TODO: MAKE GIT PUBLIC ON RELEASE!!
 class MainWindow(QMainWindow):
@@ -269,11 +274,6 @@ class MainWindow(QMainWindow):
         self.mb_file = self.menu_bar.addMenu(Lang.TEXT["file"][self.lang])
         self.mb_language = self.menu_bar.addMenu(Lang.TEXT["language"][self.lang])
 
-        #self.about_text = QLabel("About text\n....")
-        #self.about_text_action = QWidgetAction(self)
-        #self.about_text_action.setDefaultWidget(self.about_text)
-        #self.mb_file.addAction(self.about_text_action)
-
         self.button_about = QAction(Lang.TEXT["about"][self.lang])
         self.mb_about = self.menu_bar.addAction(self.button_about)
         self.button_about.triggered.connect(self.show_about)
@@ -311,7 +311,6 @@ class MainWindow(QMainWindow):
         self.mb_french = QAction("Français")
         self.mb_language.addAction(self.mb_french)
         self.mb_french.triggered.connect(lambda: self.change_language("fr"))
-
 
         # Upload image button in the middle of the windows when nothing is open
         self.button_upload_image = QPushButton(Lang.TEXT["upload_image"][self.lang], self)
@@ -459,7 +458,7 @@ class MainWindow(QMainWindow):
         Opens wiki with help info in users browser
         """
         webbrowser.open('https://github.com/mark-sed/abstract_evolution/wiki')
-            
+
 
 class AboutWindow(QMainWindow):
     """
@@ -495,7 +494,6 @@ class AboutWindow(QMainWindow):
         #self.text_browser.setObjectName("about_box")
         #self.text_browser.setStyleSheet("padding: 20px; color: red")
         self.text_browser.append("<div style=\"text-align:center\">Visit <a href=https://github.com/mark-sed/abstract_evolution/wiki>wiki page</a> for more information.</div>")
-        
         self.hide()
 
 
@@ -586,7 +584,6 @@ class EvolutionParams(QMainWindow):
         self.input_pm_amount.textChanged.connect(self.changed_pm_amount)
         self.form_layout.addRow(Lang.TEXT["amount_of_points"][parent.lang], self.input_pm_amount)
         self.input_pm_amount.setEnabled(False)
-
 
         self.input_pm_size = QLineEdit()
         pms_validator = QIntValidator()
@@ -679,15 +676,28 @@ class EvolutionParams(QMainWindow):
             self.curr_evolution.start_evolution()
 
     def changed_randomize_colors(self):
+        """
+        Toggles randomize colors variable
+        """
         self.randomize_colors = not self.randomize_colors
 
     def changed_unique_colors(self):
+        """
+        Toggles unique colors variable
+        """
         self.unique_colors = not self.unique_colors
 
     def changed_elitism(self):
+        """
+        Toggles elitism variable
+        """
         self.elitism = not self.elitism
 
     def changed_fitness_fun(self, v):
+        """
+        Changes current fitness function index
+        :param v Index of the new fitness function
+        """
         self.fitness_fun = v
         if v == 1 or v == 2:
             self.input_pm_amount.setEnabled(True)
@@ -697,32 +707,72 @@ class EvolutionParams(QMainWindow):
             self.input_pm_size.setEnabled(False)
 
     def changed_pm_amount(self, v):
+        """
+        Changes amount of particles for PM
+        :param v New amount of particles
+        """
         self.pm_amount = self.check_input_change(self.input_pm_amount, v, int, 1, 1_000_000)
 
     def changed_pm_size(self, v):
+        """
+        Changes size of particle for PM
+        :param v New size of a particle (one side of the square particle)
+        """
         self.pm_size = self.check_input_change(self.input_pm_size, v, int, 1, 100_000)
 
     def changed_crossover_percentage(self, v):
+        """
+        Changes crossover chance
+        :param v Crossover chance
+        """
         self.crossover_percentage = v
         self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.crossover_percentage))
 
     def changed_update_freq(self, v):
+        """
+        Changes image refresh rate on the screen
+        :param v New update frequency <0-100>
+        """
         self.update_freq = v
         self.input_update_freq_label.setText(Lang.TEXT["update_every"][self.parent.lang]+" {} %".format(self.update_freq))
 
     def changed_iterations(self, v):
+        """
+        Changes iterations done in the evolution
+        :param v New amount of iterations
+        """
         self.iterations = self.check_input_change(self.input_iterations, v, int, 1, 1_000_000_000)
 
     def changed_min_seeds(self, v):
+        """
+        Changes minimum amount of seeds for when seed generation is used
+        :param v New minimum amount of seeds
+        """
         self.min_seeds = self.check_input_change(self.input_min_seeds, v, int, 1, self.max_seeds)
 
     def changed_max_seeds(self, v):
+        """
+        Changes maximum amount of seeds for when seed generation is used
+        :param v New maximum amount of seeds
+        """
         self.max_seeds = self.check_input_change(self.input_max_seeds, v, int, self.min_seeds, 1000)
 
     def changed_population_size(self, v):
+        """
+        Changes size of population
+        :param v New size of the population
+        """
         self.population_size = self.check_input_change(self.input_population_size, v, int, 1, 1_000_000)
 
     def check_input_change(self, component, value, cast, min, max):
+        """
+        Validates that value picked by the user is ok
+        :param component QWidget with setText method that might be changed if value is not ok
+        :param value Current value picked
+        :param cast Type to which cast the value
+        :param min Minimum possible value
+        :param max Maximum possible value
+        """
         if len(value) == 0:
             component.setText(str(min))
             return min
@@ -737,13 +787,19 @@ class EvolutionParams(QMainWindow):
 
 
 def simulate_open(win, file):
+    """
+    Simulates opening of a file and starts evolution with default parameters
+    Used mostly for debugging
+    :param win MainWindow
+    :param file File to open (path)
+    """
     win.reference_image = file
     win.evolution_params.ok_pressed() 
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
+    #app.setStyle('Fusion')
 
     win = MainWindow(1024, 600)
     
