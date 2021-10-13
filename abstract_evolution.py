@@ -197,6 +197,21 @@ class Lang:
             "cz": "Dokončeno",
             "en": "Finished",
             "fr": "Fini" 
+        },
+        "evolve_lines": {
+            "cz": "",
+            "en": "Evolve lines",
+            "fr": "" 
+        },
+        "max_seeds": {
+            "cz": "",
+            "en": "Maximum line seeds",
+            "fr": "" 
+        },
+        "min_seeds": {
+            "cz": "",
+            "en": "Minimum line seeds",
+            "fr": "" 
         }
     }
     """
@@ -211,12 +226,14 @@ class Lang:
 # TODO: Make another and new evolution work
 # TODO: About menu
 # TODO: Icon/Logo
-# TODO: Documentation
+# TODO: Add line width to params
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Add config file to save info
 # TODO: Add manual as requested in the assignment
 # TODO: Add option to continue evolution with more cycles or even load image on which to continue
+# TODO: Use QThread to run evolution so that the GUI does not freez up
+# TODO: Option to save in progress image (maybe even option to automatically save every update)
 # TODO: Install script
 # TODO: MAKE GIT PUBLIC ON RELEASE!!
 class MainWindow(QMainWindow):
@@ -233,7 +250,6 @@ class MainWindow(QMainWindow):
         """
         super(MainWindow, self).__init__()
         self.lang = lang
-        #self.resize(width, height)
         self.setFixedSize(width, height)
         # Center the screen
         screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
@@ -554,6 +570,27 @@ class EvolutionParams(QMainWindow):
         self.input_unique_colors.toggled.connect(self.changed_unique_colors)
         self.form_layout.addRow(Lang.TEXT["unique_colors"][parent.lang], self.input_unique_colors)
 
+        # Seeds
+        self.input_evolve_lines = QCheckBox()
+        self.input_evolve_lines.toggled.connect(self.changed_evolve_lines)
+        self.form_layout.addRow(Lang.TEXT["evolve_lines"][parent.lang], self.input_evolve_lines)
+
+        self.input_max_seeds = QLineEdit()
+        mxs_validator = QIntValidator()
+        mxs_validator.setRange(1, 1000)
+        self.input_max_seeds.setValidator(mxs_validator)
+        self.input_max_seeds.show()
+        self.input_max_seeds.textChanged.connect(self.changed_max_seeds)
+        self.form_layout.addRow(Lang.TEXT["max_seeds"][parent.lang], self.input_max_seeds)
+
+        self.input_min_seeds = QLineEdit()
+        ms_validator = QIntValidator()
+        ms_validator.setRange(1, 1000)
+        self.input_min_seeds.setValidator(ms_validator)
+        self.input_min_seeds.show()
+        self.input_min_seeds.textChanged.connect(self.changed_min_seeds)
+        self.form_layout.addRow(Lang.TEXT["min_seeds"][parent.lang], self.input_min_seeds)
+
         # Elitism
         self.input_elitism = QCheckBox()
         self.input_elitism.toggled.connect(self.changed_elitism)
@@ -637,6 +674,9 @@ class EvolutionParams(QMainWindow):
         self.fitness_fun = 0
         self.pm_amount = 100
         self.pm_size = 3
+        self.evolve_lines = False
+        self.max_seeds = 100
+        self.min_seeds = 100
 
     def set_input_defaults(self):
         """
@@ -655,6 +695,11 @@ class EvolutionParams(QMainWindow):
         self.input_fitness_fun.setCurrentIndex(self.fitness_fun)
         self.input_pm_amount.setText(str(self.pm_amount))
         self.input_pm_size.setText(str(self.pm_size))
+        self.input_evolve_lines.setChecked(self.evolve_lines)
+        self.input_min_seeds.setText(str(self.min_seeds))
+        self.input_max_seeds.setText(str(self.max_seeds))
+        self.input_min_seeds.setEnabled(self.evolve_lines)
+        self.input_max_seeds.setEnabled(self.evolve_lines)
 
     def button_set_defaults(self):
         """
@@ -686,6 +731,14 @@ class EvolutionParams(QMainWindow):
         Toggles unique colors variable
         """
         self.unique_colors = not self.unique_colors
+
+    def changed_evolve_lines(self):
+        """
+        Toggles evolve lines variable
+        """
+        self.evolve_lines = not self.evolve_lines
+        self.input_min_seeds.setEnabled(self.evolve_lines)
+        self.input_max_seeds.setEnabled(self.evolve_lines)
 
     def changed_elitism(self):
         """

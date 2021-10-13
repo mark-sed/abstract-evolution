@@ -13,6 +13,54 @@ from copy import deepcopy
 from abstract_evolution import Lang
 
 
+class Seed:
+
+    def __init__(self, min_x, max_x, min_y, max_y):
+        self.min_x = min_x
+        self.min_y = min_y
+        self.max_x = max_x
+        self.max_y = max_y
+        self.x = randint(min_x, max_x)
+        self.y = randint(min_y, max_y)
+        self.color = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+        self.generate_directions()
+
+    def grow(self):
+        self.x += 1*self.dir_x
+        self.y += 1*self.dir_y
+        if self.x < self.min_x or self.x > self.max_x or self.y < self.min_y or self.y > self.max_y:
+            self.x = randint(self.min_x, self.max_x)
+            self.y = randint(self.min_y, self.max_y)
+        
+
+    def generate_directions(self):
+        r = randint(0, 7)
+        if r == 0:  # N
+            self.dir_x = 0
+            self.dir_y = -1
+        elif r == 1: # NE
+            self.dir_x = 1
+            self.dir_y = -1
+        elif r == 2: # E
+            self.dir_x = 1
+            self.dir_y = 0
+        elif r == 3: # SE
+            self.dir_x = 1
+            self.dir_y = 1
+        elif r == 4: # S
+            self.dir_x = 0
+            self.dir_y = 1
+        elif r == 5: # SW
+            self.dir_x = -1
+            self.dir_y = 1
+        elif r == 6: # W
+            self.dir_x = -1
+            self.dir_y = 0
+        else: # NW
+            self.dir_x = -1
+            self.dir_y = -1
+
+
 class Phenotype:
     """
     Phenotype of potential image
@@ -21,7 +69,7 @@ class Phenotype:
     # List of colors used by other phenotypes
     CLOSED_LIST = []
 
-    def __init__(self, ref_arr, randomize_colors=True, unique_colors=False):
+    def __init__(self, ref_arr, seed_amount=0, randomize_colors=True, unique_colors=False):
         """
         Constructor
         :param ref_arr Reference image as an numpy array used for fitness
@@ -45,6 +93,21 @@ class Phenotype:
         for i in range(len(self.arr)):
             for a in range(len(self.arr[0])):
                 self.arr[i][a] = pixel
+        self.seed_amount = seed_amount
+        # TODO: Apply color settings also to lines
+        self.seeds = [Seed(0, len(self.arr)-1, 0, len(self.arr[0])-1) for _ in range(seed_amount)]
+        self.paint_seeds()
+
+    def paint_seeds(self):
+        for x, y, c in self.get_seeds():
+            self.arr[x][y] = c
+
+    def grow_seeds(self):
+        for s in self.seeds:
+            s.grow()
+
+    def get_seeds(self):
+        return [(s.x, s.y, s.color) for s in self.seeds]
 
 
 class Population:
@@ -52,7 +115,7 @@ class Population:
     Population of phenotypes
     """
 
-    def __init__(self, size, ref_arr, randomize_colors, unique_colors):
+    def __init__(self, size, ref_arr, min_seeds, max_seeds, randomize_colors, unique_colors):
         """
         Constructor
         :param size How many phenotypes will there be in one population
@@ -63,7 +126,12 @@ class Population:
         """
         self.size = size
         self.ref_arr = ref_arr
-        self.phenotypes = [Phenotype(self.ref_arr, randomize_colors, unique_colors) for _ in range(size)]
+        self.phenotypes = [Phenotype(self.ref_arr, randint(min_seeds, max_seeds), randomize_colors, unique_colors) for _ in range(size)]
+        
+    def grow_seeds(self):
+        for p in self.phenotypes:
+            p.grow_seeds()
+            p.paint_seeds()
 
     def __getitem__(self, key):
         """
@@ -89,7 +157,12 @@ class Evolution:
         self.main_window = main_window
         self.ref_img = Image.open(reference_image).convert('RGBA')
         self.ref_img_arr = np.array(self.ref_img)
-        self.population = Population(params_window.population_size, self.ref_img_arr, params_window.randomize_colors, params_window.unique_colors)
+        min_seeds = 0
+        max_seeds = 0
+        if params_window.evolve_lines:
+            min_seeds = params_window.min_seeds
+            max_seeds = params_window.max_seeds
+        self.population = Population(params_window.population_size, self.ref_img_arr, min_seeds, max_seeds, params_window.randomize_colors, params_window.unique_colors)
 
     def fitness_hist(self, arr1, arr2):
         """
@@ -196,6 +269,8 @@ class Evolution:
             self.fits = [(self.fitness_function(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
             self.fits.sort(key=lambda x: x[0])
             self.crossover()
+            if params.evolve_lines:
+                self.population.grow_seeds()
             if (iteration+1) % (params.iterations * (params.update_freq/100)) == 0:
                 print("Best fitness: {}".format(self.fits[0][0]))
                 self.display_image(self.fits[0][1].arr)
