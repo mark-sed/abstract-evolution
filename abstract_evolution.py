@@ -199,19 +199,39 @@ class Lang:
             "fr": "Fini" 
         },
         "evolve_lines": {
-            "cz": "",
+            "cz": "Evolvuj křivky",
             "en": "Evolve lines",
-            "fr": "" 
+            "fr": "Évoluer des lignes" 
         },
         "max_seeds": {
-            "cz": "",
+            "cz": "Maximum semínek",
             "en": "Maximum line seeds",
-            "fr": "" 
+            "fr": "Maximum de graines" 
         },
         "min_seeds": {
-            "cz": "",
+            "cz": "Minimum semínek",
             "en": "Minimum line seeds",
-            "fr": "" 
+            "fr": "Minimum de graines" 
+        },
+        "max_seed_w": {
+            "cz": "Maximální šířka křivky",
+            "en": "Maximum line width",
+            "fr": "Largeur de ligne maximale" 
+        },
+        "min_seed_w": {
+            "cz": "Minimální šířka křivky",
+            "en": "Minimum line width",
+            "fr": "Largeur de ligne minimale" 
+        },
+        "min_seed_l": {
+            "cz": "Minimální délka křivky",
+            "en": "Minimum line length",
+            "fr": "Longueur de ligne minimale" 
+        },
+        "dir_change_chance": {
+            "cz": "Šance na změnu směru",
+            "en": "Direction change chance",
+            "fr": "Chance de changement de direction" 
         }
     }
     """
@@ -352,6 +372,7 @@ class MainWindow(QMainWindow):
         if fileName:
             self.reference_image = fileName
             self.evolution_params.show()
+            self.evolution_params.activateWindow()
 
     def display_image(self, image):
         """
@@ -429,6 +450,9 @@ class MainWindow(QMainWindow):
         """
         self.button_upload_image.setEnabled(False)
         self.mb_file.setEnabled(False)
+        self.mb_language.setEnabled(False)
+        self.button_about.setEnabled(False)
+        self.button_help.setEnabled(False)
 
     def evolve_new(self):
         ...
@@ -535,9 +559,6 @@ class EvolutionParams(QMainWindow):
         # Center the screen
         #self.setMinimumWidth(EvolutionParams.MIN_WIDTH)
         #self.setMaximumWidth(EvolutionParams.MAX_WIDTH)
-        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
-        center = QApplication.desktop().screenGeometry(screen).center()
-        self.move(center.x() - self.width() // 2, center.y() - self.height() // 2)
 
         # Input form
         self.form_layout = QFormLayout()
@@ -590,6 +611,37 @@ class EvolutionParams(QMainWindow):
         self.input_min_seeds.show()
         self.input_min_seeds.textChanged.connect(self.changed_min_seeds)
         self.form_layout.addRow(Lang.TEXT["min_seeds"][parent.lang], self.input_min_seeds)
+
+        self.input_max_seed_w = QLineEdit()
+        mwm_validator = QIntValidator()
+        mwm_validator.setRange(1, 10000)
+        self.input_max_seed_w.setValidator(mwm_validator)
+        self.input_max_seed_w.show()
+        self.input_max_seed_w.textChanged.connect(self.changed_max_seed_w)
+        self.form_layout.addRow(Lang.TEXT["max_seed_w"][parent.lang], self.input_max_seed_w)
+
+        self.input_min_seed_w = QLineEdit()
+        mw_validator = QIntValidator()
+        mw_validator.setRange(1, 10000)
+        self.input_min_seed_w.setValidator(mw_validator)
+        self.input_min_seed_w.show()
+        self.input_min_seed_w.textChanged.connect(self.changed_min_seed_w)
+        self.form_layout.addRow(Lang.TEXT["min_seed_w"][parent.lang], self.input_min_seed_w)
+
+        self.input_min_seed_l = QLineEdit()
+        ml_validator = QIntValidator()
+        self.input_min_seed_l.setValidator(ml_validator)
+        self.input_min_seed_l.show()
+        self.input_min_seed_l.textChanged.connect(self.changed_min_seed_l)
+        self.form_layout.addRow(Lang.TEXT["min_seed_l"][parent.lang], self.input_min_seed_l)
+
+        self.input_dir_change_chance = QSlider(Qt.Horizontal)
+        self.input_dir_change_chance.setSingleStep(1)
+        self.input_dir_change_chance.setMinimum(1)
+        self.input_dir_change_chance.setMaximum(100)
+        self.input_dir_change_chance.valueChanged[int].connect(self.changed_dir_change_chance)
+        self.input_dir_change_chance_label = QLabel(Lang.TEXT["dir_change_chance"][parent.lang]+" 5 %")
+        self.form_layout.addRow(self.input_dir_change_chance_label, self.input_dir_change_chance)
 
         # Elitism
         self.input_elitism = QCheckBox()
@@ -658,6 +710,7 @@ class EvolutionParams(QMainWindow):
         wid = QtWidgets.QWidget(self)
         self.setCentralWidget(wid)
         wid.setLayout(self.form_layout)
+        self.move(parent.x() + parent.width()//2 - self.width(), parent.y())
         self.update()
 
     def set_defaults(self):
@@ -675,8 +728,12 @@ class EvolutionParams(QMainWindow):
         self.pm_amount = 100
         self.pm_size = 3
         self.evolve_lines = False
-        self.max_seeds = 100
-        self.min_seeds = 100
+        self.max_seeds = 10
+        self.min_seeds = 1
+        self.min_seed_w = 3
+        self.max_seed_w = 10
+        self.min_seed_l = 1
+        self.dir_change_chance = 5
 
     def set_input_defaults(self):
         """
@@ -698,8 +755,16 @@ class EvolutionParams(QMainWindow):
         self.input_evolve_lines.setChecked(self.evolve_lines)
         self.input_min_seeds.setText(str(self.min_seeds))
         self.input_max_seeds.setText(str(self.max_seeds))
+        self.input_min_seed_w.setText(str(self.min_seed_w))
+        self.input_max_seed_w.setText(str(self.max_seed_w))
+        self.input_min_seed_l.setText(str(self.min_seed_l))
+        self.input_dir_change_chance.setValue(self.dir_change_chance)
         self.input_min_seeds.setEnabled(self.evolve_lines)
         self.input_max_seeds.setEnabled(self.evolve_lines)
+        self.input_min_seed_w.setEnabled(self.evolve_lines)
+        self.input_max_seed_w.setEnabled(self.evolve_lines)
+        self.input_min_seed_l.setEnabled(self.evolve_lines)
+        self.input_dir_change_chance.setEnabled(self.evolve_lines)
 
     def button_set_defaults(self):
         """
@@ -739,6 +804,10 @@ class EvolutionParams(QMainWindow):
         self.evolve_lines = not self.evolve_lines
         self.input_min_seeds.setEnabled(self.evolve_lines)
         self.input_max_seeds.setEnabled(self.evolve_lines)
+        self.input_min_seed_w.setEnabled(self.evolve_lines)
+        self.input_max_seed_w.setEnabled(self.evolve_lines)
+        self.input_min_seed_l.setEnabled(self.evolve_lines)
+        self.input_dir_change_chance.setEnabled(self.evolve_lines)
 
     def changed_elitism(self):
         """
@@ -789,6 +858,14 @@ class EvolutionParams(QMainWindow):
         self.update_freq = v
         self.input_update_freq_label.setText(Lang.TEXT["update_every"][self.parent.lang]+" {} %".format(self.update_freq))
 
+    def changed_dir_change_chance(self, v):
+        """
+        Changes chance for direction change
+        :param v New chance <0-100>
+        """
+        self.dir_change_chance = v
+        self.input_dir_change_chance_label.setText(Lang.TEXT["dir_change_chance"][self.parent.lang]+" {} %".format(self.dir_change_chance))
+
     def changed_iterations(self, v):
         """
         Changes iterations done in the evolution
@@ -809,6 +886,30 @@ class EvolutionParams(QMainWindow):
         :param v New maximum amount of seeds
         """
         self.max_seeds = self.check_input_change(self.input_max_seeds, v, int, self.min_seeds, 1000)
+
+    def changed_min_seed_w(self, v):
+        """
+        Changes minimum width of seeds for when seed generation is used
+        :param v New minimum width of seeds
+        """
+        self.min_seed_w = self.check_input_change(self.input_min_seed_w, v, int, 1, self.max_seed_w)
+
+    def changed_max_seed_w(self, v):
+        """
+        Changes maximum width of seeds for when seed generation is used
+        :param v New maximum width of seeds
+        """
+        self.max_seed_w = self.check_input_change(self.input_max_seed_w, v, int, self.min_seed_w, 10000)
+
+    def changed_min_seed_l(self, v):
+        """
+        Changes minimum length of seeds for when seed generation is used
+        :param v New minimum length of seeds
+        """
+        try:
+            self.min_seed_l = int(v)
+        except Exception:
+            self.min_seed_l = 1
 
     def changed_population_size(self, v):
         """

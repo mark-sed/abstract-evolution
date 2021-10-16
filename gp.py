@@ -13,27 +13,63 @@ from copy import deepcopy
 from abstract_evolution import Lang
 
 
+# TODO: Leave the option to grow seeds continuously as it is now but also add option to evolve them at the start
 class Seed:
+    """
+    Paint seed, grows on the canvas leaving paint trail
+    """
 
-    def __init__(self, min_x, max_x, min_y, max_y):
+    # Used for unique color
+    CLOSED_LIST = []
+
+    def __init__(self, min_x, max_x, min_y, max_y, min_w, max_w, ref_arr, randomize_colors=False, unique_colors=False):
+        """
+        Constructor
+        :param min_x Minimal x position
+        :param max_x Maximal x position
+        :param min_y Minimal y position
+        :param max_y Maximal y position
+        :param min_w Minimal width
+        :param max_w Maximal width
+        :param ref_arr Reference image
+        :param randomize_colors If random colors should be used or the colors in reference image
+        :param unique_colors No 2 seeds can have the same color
+        """
         self.min_x = min_x
         self.min_y = min_y
         self.max_x = max_x
         self.max_y = max_y
         self.x = randint(min_x, max_x)
         self.y = randint(min_y, max_y)
-        self.color = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+        if randomize_colors:
+            # Pick random color
+            self.color = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+            # If uniqueness is required generate new color
+            while unique_colors and self.c in Seed.CLOSED_LIST:
+                self.color = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+            Seed.CLOSED_LIST.append(self.color)
+        else:
+            self.color = [x for x in ref_arr[randint(0, len(ref_arr)-1)][randint(0, len(ref_arr[0])-1)]]
+            while unique_colors and self.color in Seed.CLOSED_LIST:
+                self.color = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+            Seed.CLOSED_LIST.append(self.color)
         self.generate_directions()
+        self.w = randint(min_w, max_w)
 
     def grow(self):
+        """
+        Grows the seed in its direction
+        """
         self.x += 1*self.dir_x
         self.y += 1*self.dir_y
         if self.x < self.min_x or self.x > self.max_x or self.y < self.min_y or self.y > self.max_y:
             self.x = randint(self.min_x, self.max_x)
             self.y = randint(self.min_y, self.max_y)
         
-
     def generate_directions(self):
+        """
+        Picks random direction for the seed
+        """
         r = randint(0, 7)
         if r == 0:  # N
             self.dir_x = 0
@@ -69,10 +105,13 @@ class Phenotype:
     # List of colors used by other phenotypes
     CLOSED_LIST = []
 
-    def __init__(self, ref_arr, seed_amount=0, randomize_colors=True, unique_colors=False):
+    def __init__(self, ref_arr, seed_amount=0, min_w=0, max_w=0, randomize_colors=True, unique_colors=False):
         """
         Constructor
         :param ref_arr Reference image as an numpy array used for fitness
+        :param seed_amount Amount of seeds to generate
+        :param min_w Minimum seed width
+        :param max_w Maximum seed width
         :param randomize_colors If True color of the phenotype will be picked at random
                                 otherwise values will be extracted from the reference image
         :param unique_colors If True then no 2 phenotypes will have the same color
@@ -95,19 +134,49 @@ class Phenotype:
                 self.arr[i][a] = pixel
         self.seed_amount = seed_amount
         # TODO: Apply color settings also to lines
-        self.seeds = [Seed(0, len(self.arr)-1, 0, len(self.arr[0])-1) for _ in range(seed_amount)]
+        self.seeds = [Seed(0, len(self.arr)-1, 0, len(self.arr[0])-1, min_w, max_w, ref_arr, randomize_colors, unique_colors) for _ in range(seed_amount)]
         self.paint_seeds()
 
     def paint_seeds(self):
-        for x, y, c in self.get_seeds():
-            self.arr[x][y] = c
+        """
+        Paints seeds on the canvas
+        """
+        for x, y, c, w in self.get_seeds():
+            pixel = np.full((w, w, 4), c)
+            start_x = x-w//2 if x-w//2 >= 0 else 0
+            end_x = x+w//2 if x+w//2 < len(self.arr) else len(self.arr)-1
+            start_y = y-w//2 if y-w//2 >= 0 else 0
+            end_y = y+w//2 if y+w//2 < len(self.arr[0]) else len(self.arr[0])-1
+            # TODO: Dont continue but fill
+            if end_x-start_x != w or end_y-start_y != w:
+                continue
+            self.arr[start_x:end_x, start_y:end_y] = pixel
 
-    def grow_seeds(self):
+    def grow_seeds(self, dir_change_chance=0.0):
+        """
+        Grows all seeds
+        :param dir_change_chance Chance that the direction of the seed will change
+        """
         for s in self.seeds:
             s.grow()
+            if random.random() <= dir_change_chance:
+                s.generate_directions()
+
+    def paint_line(self, length, dir_change_chance=0.0):
+        """
+        Paints line of set length
+        :param length Length of the line (number of grows)
+        :param dir_change_chance Chance that the direction of the seed will change
+        """
+        for _ in range(length):
+            self.grow_seeds(dir_change_chance)
+            self.paint_seeds()
 
     def get_seeds(self):
-        return [(s.x, s.y, s.color) for s in self.seeds]
+        """
+        :return Seed as tuple of x, y, color and width
+        """
+        return [(s.x, s.y, s.color, s.w) for s in self.seeds]
 
 
 class Population:
@@ -115,23 +184,40 @@ class Population:
     Population of phenotypes
     """
 
-    def __init__(self, size, ref_arr, min_seeds, max_seeds, randomize_colors, unique_colors):
+    def __init__(self, size, ref_arr, min_seeds, max_seeds, min_w, max_w, randomize_colors, unique_colors):
         """
         Constructor
         :param size How many phenotypes will there be in one population
         :param ref_arr Reference image as an array used for the fitness
+        :param min_seeds Minimum amount of seeds
+        :param max_seeds Maximum amount of seeds
+        :param min_w Minimum line width
+        :param max_w Maximum line width
         :param randomize_colors If True color of the phenotype will be picked at random
                                 otherwise values will be extracted from the reference image
         :param unique_colors If True then no 2 phenotypes will have the same color
         """
         self.size = size
         self.ref_arr = ref_arr
-        self.phenotypes = [Phenotype(self.ref_arr, randint(min_seeds, max_seeds), randomize_colors, unique_colors) for _ in range(size)]
+        self.phenotypes = [Phenotype(self.ref_arr, randint(min_seeds, max_seeds), min_w, max_w, randomize_colors, unique_colors) for _ in range(size)]
         
     def grow_seeds(self):
+        """
+        Grows all seeds
+        """
         for p in self.phenotypes:
             p.grow_seeds()
             p.paint_seeds()
+
+    def paint_lines(self, min, max, dir_change_chance=0.0):
+        """
+        Paints a line of of random length in between min and max
+        :param min Minimum line length
+        :param max Maximum line length
+        :param dir_change_chance Chance of direction being changed
+        """
+        for p in self.phenotypes:
+            p.paint_line(randint(min, max), dir_change_chance)
 
     def __getitem__(self, key):
         """
@@ -162,7 +248,9 @@ class Evolution:
         if params_window.evolve_lines:
             min_seeds = params_window.min_seeds
             max_seeds = params_window.max_seeds
-        self.population = Population(params_window.population_size, self.ref_img_arr, min_seeds, max_seeds, params_window.randomize_colors, params_window.unique_colors)
+        self.population = Population(params_window.population_size, self.ref_img_arr, 
+                                     min_seeds, max_seeds, params_window.min_seed_w, params_window.max_seed_w,
+                                     params_window.randomize_colors, params_window.unique_colors)
 
     def fitness_hist(self, arr1, arr2):
         """
@@ -260,7 +348,12 @@ class Evolution:
         else:
             self.init_fitness_points(self.ref_img_arr, params.pm_amount, params.pm_size, True)
             self.fitness_function = self.fitness_points
-        
+
+        if params.evolve_lines:
+            # Calculate diagonal length
+            max_size = (len(self.ref_img_arr)**2 + len(self.ref_img_arr[1])**2)**0.5
+            self.population.paint_lines(10, int(max_size), params.dir_change_chance/100)
+
         # TODO: Add mutation - Random one shape added to the image
         # TODO: Randomly add one color phenotypes to the population?
         # TODO: Try incorporating back options for lines as is in lines branch
@@ -269,8 +362,6 @@ class Evolution:
             self.fits = [(self.fitness_function(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
             self.fits.sort(key=lambda x: x[0])
             self.crossover()
-            if params.evolve_lines:
-                self.population.grow_seeds()
             if (iteration+1) % (params.iterations * (params.update_freq/100)) == 0:
                 print("Best fitness: {}".format(self.fits[0][0]))
                 self.display_image(self.fits[0][1].arr)
