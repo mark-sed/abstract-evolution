@@ -247,6 +247,16 @@ class Lang:
             "cz": "Šance mutace",
             "en": "Mutation chance",
             "fr": "Chance de mutation" 
+        },
+        "exact_pm": {
+            "cz": "Uznej pouze stejné barvy",
+            "en": "Match only same colors",
+            "fr": "Reconnaître uniquement les mêmes couleurs" 
+        },
+        "max_color_diff": {
+            "cz": "Maximální barevná odchylka",
+            "en": "Maximal color difference",
+            "fr": "Différence de couleur maximale" 
         }
     }
     """
@@ -672,7 +682,7 @@ class EvolutionParams(QMainWindow):
 
         self.input_dir_change_chance = QSlider(Qt.Horizontal)
         self.input_dir_change_chance.setSingleStep(1)
-        self.input_dir_change_chance.setMinimum(1)
+        self.input_dir_change_chance.setMinimum(0)
         self.input_dir_change_chance.setMaximum(100)
         self.input_dir_change_chance.valueChanged[int].connect(self.changed_dir_change_chance)
         self.input_dir_change_chance_label = QLabel(Lang.TEXT["dir_change_chance"][parent.lang]+" 5 %")
@@ -726,6 +736,20 @@ class EvolutionParams(QMainWindow):
         self.form_layout.addRow(Lang.TEXT["point_size"][parent.lang], self.input_pm_size)
         self.input_pm_size.setEnabled(False)
 
+        # PM exact pm
+        self.input_exact_pm = QCheckBox()
+        self.input_exact_pm.toggled.connect(self.changed_exact_pm)
+        self.form_layout.addRow(Lang.TEXT["exact_pm"][parent.lang], self.input_exact_pm)
+        self.input_exact_pm.setEnabled(False)
+
+        self.input_max_color_diff = QLineEdit()
+        mcd_validator = QIntValidator()
+        mcd_validator.setRange(0, 255*2)
+        self.input_max_color_diff.setValidator(mcd_validator)
+        self.input_max_color_diff.textChanged.connect(self.changed_max_color_diff)
+        self.form_layout.addRow(Lang.TEXT["max_color_diff"][parent.lang], self.input_max_color_diff)
+        self.input_max_color_diff.setEnabled(False)
+
         # Update frequency
         self.input_update_freq = QSlider(Qt.Horizontal)
         self.input_update_freq.setSingleStep(5)
@@ -778,6 +802,8 @@ class EvolutionParams(QMainWindow):
         self.dir_change_chance = 5
         self.grow_during_evolution = False
         self.mutation_chance = 5
+        self.exact_pm = False
+        self.max_color_diff = 30
 
     def set_input_defaults(self):
         """
@@ -812,6 +838,9 @@ class EvolutionParams(QMainWindow):
         self.input_min_seed_l.setEnabled(self.evolve_lines)
         self.input_dir_change_chance.setEnabled(self.evolve_lines)
         self.input_grow_during_evolution.setEnabled(self.evolve_lines)
+        self.input_exact_pm.setChecked(self.exact_pm)
+        self.input_max_color_diff.setText(str(self.max_color_diff))
+        self.input_max_color_diff.setEnabled(self.exact_pm)
 
     def button_set_defaults(self):
         """
@@ -875,12 +904,25 @@ class EvolutionParams(QMainWindow):
         :param v Index of the new fitness function
         """
         self.fitness_fun = v
-        if v == 1 or v == 2:
-            self.input_pm_amount.setEnabled(True)
-            self.input_pm_size.setEnabled(True)
-        else:
-            self.input_pm_amount.setEnabled(False)
-            self.input_pm_size.setEnabled(False)
+        # Enable/Disable settings for PM
+        self.input_pm_amount.setEnabled(v == 1 or v == 2)
+        self.input_pm_size.setEnabled(v == 1 or v == 2)
+        self.input_exact_pm.setEnabled(v == 1 or v == 2)
+        self.input_max_color_diff.setEnabled((v == 1 or v == 2) and self.exact_pm)
+    
+    def changed_exact_pm(self):
+        """
+        Toggles exact color point match
+        """
+        self.exact_pm = not self.exact_pm
+        self.input_max_color_diff.setEnabled(self.exact_pm)
+
+    def changed_max_color_diff(self, v):
+        """
+        Changes maximal color difference for PM
+        :param v New max difference
+        """
+        self.max_color_diff = self.check_input_change(self.input_max_color_diff, v, int, 1, 255*2)
 
     def changed_pm_amount(self, v):
         """

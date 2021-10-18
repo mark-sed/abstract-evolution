@@ -306,7 +306,24 @@ class Evolution:
         for x, y in self.pm_points:
             p1 = arr1[x:x+self.pm_size, y:y+self.pm_size]
             p2 = arr2[x:x+self.pm_size, y:y+self.pm_size]
-            fit += np.sum(np.absolute(np.subtract(p1, p2)))
+            if not self.params_window.exact_pm:
+                fit += np.sum(np.absolute(np.subtract(p1, p2)))
+            else:
+                max_color_diff = self.params_window.max_color_diff
+                if max_color_diff == 0:
+                    # If the allowed difference is 0 (exact match) then rather
+                    # use faster numpy version (bigger number = worse, thats why there's a subtraction)
+                    fit += 255*4 - np.sum(np.equal(p1, p2))
+                else:
+                    for x in range(len(p1)):
+                        diff = 0
+                        for y in range(len(p1[0])):
+                            diff = abs(int(p1[x][y][0]) - int(p2[x][y][0]))
+                            diff += abs(int(p1[x][y][1]) - int(p2[x][y][1]))
+                            diff += abs(int(p1[x][y][2]) - int(p2[x][y][2]))
+                            # Bigger number = worse so turn around
+                            if diff > max_color_diff:
+                                fit += 1
         return fit
 
     def grow_seeds(self):
