@@ -533,7 +533,7 @@ class MainWindow(QMainWindow):
         """
         Opens wiki with help info in users browser
         """
-        webbrowser.open('https://github.com/mark-sed/abstract_evolution/wiki')
+        webbrowser.open('https://github.com/mark-sed/abstract-evolution/wiki')
 
 
 class AboutWindow(QMainWindow):
@@ -569,7 +569,7 @@ class AboutWindow(QMainWindow):
         self.text_browser.setOpenExternalLinks(True)
         #self.text_browser.setObjectName("about_box")
         #self.text_browser.setStyleSheet("padding: 20px; color: red")
-        self.text_browser.append("<div style=\"text-align:center\">Visit <a href=https://github.com/mark-sed/abstract_evolution/wiki>wiki page</a> for more information.</div>")
+        self.text_browser.append("<div style=\"text-align:center\">Visit <a href=https://github.com/mark-sed/abstract-evolution/wiki>wiki page</a> for more information.</div>")
         self.hide()
 
 

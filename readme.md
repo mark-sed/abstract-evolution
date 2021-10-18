@@ -5,7 +5,7 @@ It uses genetic programming to create abstract art by evolving an image into sel
 
 ## Wiki
 
-To get to know the program better have a look into the [Abstract evolution's wiki](https://github.com/mark-sed/abstract_evolution/wiki)
+To get to know the program better have a look into the [Abstract evolution's wiki](https://github.com/mark-sed/abstract-evolution/wiki)
 
 ## Requirements
 * Python3 and following packages:
