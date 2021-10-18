@@ -89,9 +89,9 @@ class Lang:
             "fr": "Paramètres d'évolution" 
         },
         "quit": {
-            "cz": "Konec",
-            "en": "Quit",
-            "fr": "Quitter" 
+            "cz": "Ukončit Abstract Evolution",
+            "en": "Quit Abstract Evolution",
+            "fr": "Quitter Abstract Evolution" 
         },
         "select_image": {
             "cz": "Vyberte obrázek nad kterým provádět evoluci",
@@ -232,6 +232,21 @@ class Lang:
             "cz": "Šance na změnu směru",
             "en": "Direction change chance",
             "fr": "Chance de changement de direction" 
+        },
+        "grow_during_evolution": {
+            "cz": "Růst semínek během evoluce",
+            "en": "Grow seeds during evolution",
+            "fr": "Pousser des graines pendant l'évolution" 
+        },
+        "new_window": {
+            "cz": "Nový projekt",
+            "en": "New project",
+            "fr": "Nouveau projet" 
+        },
+        "mutation_chance": {
+            "cz": "Šance mutace",
+            "en": "Mutation chance",
+            "fr": "Chance de mutation" 
         }
     }
     """
@@ -243,16 +258,16 @@ class Lang:
     """
 
 
-# TODO: Make another and new evolution work
 # TODO: About menu
+# TODO: Max mutation size?
 # TODO: Icon/Logo
-# TODO: Add line width to params
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Add config file to save info
 # TODO: Add manual as requested in the assignment
 # TODO: Add option to continue evolution with more cycles or even load image on which to continue
 # TODO: Use QThread to run evolution so that the GUI does not freez up
+# TODO: Scale up option? Would evolve smaller image and then user could scale it up
 # TODO: Option to save in progress image (maybe even option to automatically save every update)
 # TODO: Install script
 # TODO: MAKE GIT PUBLIC ON RELEASE!!
@@ -261,7 +276,10 @@ class MainWindow(QMainWindow):
     Main program windows
     """
 
-    def __init__(self, width, height, lang="en"):
+    # Holds amount of projects created this session (to offset window)
+    INSTANCES_CREATED = 0
+
+    def __init__(self, width=1024, height=600, lang="en"):
         """
         Constructor
         :param width Main window width
@@ -269,12 +287,14 @@ class MainWindow(QMainWindow):
         :param lang Language in which to display the GUI ("en"/"fr"/"cz"). "en" by default.
         """
         super(MainWindow, self).__init__()
+        MainWindow.INSTANCES_CREATED += 1
         self.lang = lang
         self.setFixedSize(width, height)
         # Center the screen
         screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
         center = QApplication.desktop().screenGeometry(screen).center()
-        self.move(center.x() - self.width() // 2, center.y() - self.height() // 2)
+        self.move(center.x() - self.width() // 2 + (MainWindow.INSTANCES_CREATED % 5)*20, 
+                  center.y() - self.height() // 2 - (MainWindow.INSTANCES_CREATED % 5)*20)
         self.evolution_params = EvolutionParams(self)
         self.reference_image = None
         self.image_label = QLabel(self)
@@ -294,7 +314,8 @@ class MainWindow(QMainWindow):
         self.progress_bar.move(self.width()//2-self.progress_bar.width()//2, self.height()-200)
         self.please_wait_label = QLabel(Lang.TEXT["please_wait"][self.lang], self)
         self.please_wait_label.adjustSize()
-        self.please_wait_label.move(self.width()//2-self.please_wait_label.width()//2, self.progress_bar.y()-self.please_wait_label.height()-5)
+        self.please_wait_label.move(self.width()//2-self.please_wait_label.width()//2, 
+                                    self.progress_bar.y()-self.please_wait_label.height()-5)
         self.about_window = AboutWindow(self)
         self.initUI()
     
@@ -320,11 +341,18 @@ class MainWindow(QMainWindow):
         self.button_help.triggered.connect(self.show_help)
 
         # Setting up File menu bar
+
+        # New window
+        self.mb_new_window = QAction(Lang.TEXT["new_window"][self.lang])
+        self.mb_file.addAction(self.mb_new_window)
+        self.mb_new_window.triggered.connect(self.evolve_new)
+
         # Upload image
         self.mb_upload_image = QAction(Lang.TEXT["upload_image"][self.lang])
         self.mb_file.addAction(self.mb_upload_image)
         self.mb_upload_image.triggered.connect(self.upload_image)
 
+        
         # Evolution params
         self.mb_evolution_params = QAction(Lang.TEXT["evolution_parameters"][self.lang])
         self.mb_file.addAction(self.mb_evolution_params)
@@ -432,6 +460,10 @@ class MainWindow(QMainWindow):
         else:
             self.please_wait_label.show()
             self.progress_bar.setValue(v)
+            self.save_image_button.hide()
+            self.evolve_again_button.hide()
+            self.evolve_another_button.hide()
+            self.progress_bar.setFormat("%p%")
         self.please_wait_label.repaint()
         self.progress_bar.show()
         
@@ -455,10 +487,14 @@ class MainWindow(QMainWindow):
         self.button_help.setEnabled(False)
 
     def evolve_new(self):
-        ...
+        """
+        Creates new main window
+        """
+        MainWindow()
 
     def evolve_again(self):
-        ...
+        self.update_progress(0)
+        self.evolution_params.start_evolution_pressed()
 
     def change_language(self, name):
         """
@@ -552,13 +588,8 @@ class EvolutionParams(QMainWindow):
         self.set_defaults()
         self.parent = parent
         self.setWindowTitle(Lang.TEXT["params_window_title"][parent.lang])
-        #self.resize(600, 400)
-        # Remove maximize and minimize button
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMaximizeButtonHint)
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMinimizeButtonHint)
-        # Center the screen
-        #self.setMinimumWidth(EvolutionParams.MIN_WIDTH)
-        #self.setMaximumWidth(EvolutionParams.MAX_WIDTH)
 
         # Input form
         self.form_layout = QFormLayout()
@@ -596,6 +627,10 @@ class EvolutionParams(QMainWindow):
         self.input_evolve_lines.toggled.connect(self.changed_evolve_lines)
         self.form_layout.addRow(Lang.TEXT["evolve_lines"][parent.lang], self.input_evolve_lines)
 
+        self.input_grow_during_evolution = QCheckBox()
+        self.input_grow_during_evolution.toggled.connect(self.changed_grow_during_evolution)
+        self.form_layout.addRow(Lang.TEXT["grow_during_evolution"][parent.lang], self.input_grow_during_evolution)
+
         self.input_max_seeds = QLineEdit()
         mxs_validator = QIntValidator()
         mxs_validator.setRange(1, 1000)
@@ -606,7 +641,7 @@ class EvolutionParams(QMainWindow):
 
         self.input_min_seeds = QLineEdit()
         ms_validator = QIntValidator()
-        ms_validator.setRange(1, 1000)
+        ms_validator.setRange(0, 1000)
         self.input_min_seeds.setValidator(ms_validator)
         self.input_min_seeds.show()
         self.input_min_seeds.textChanged.connect(self.changed_min_seeds)
@@ -657,6 +692,15 @@ class EvolutionParams(QMainWindow):
         self.input_crossover_percentage_label = QLabel(Lang.TEXT["crossover"][parent.lang]+" 50 %")
         self.form_layout.addRow(self.input_crossover_percentage_label, self.input_crossover_percentage)
 
+        # Mutation chance
+        self.input_mutation_chance = QSlider(Qt.Horizontal)
+        self.input_mutation_chance.setSingleStep(10)
+        self.input_mutation_chance.setMinimum(1)
+        self.input_mutation_chance.setMaximum(100)
+        self.input_mutation_chance.valueChanged[int].connect(self.changed_mutation_chance)
+        self.input_mutation_chance_label = QLabel(Lang.TEXT["mutation_chance"][parent.lang]+" 5 %")
+        self.form_layout.addRow(self.input_mutation_chance_label, self.input_mutation_chance)
+
         # Fitness function
         self.input_fitness_fun = QComboBox()
         self.input_fitness_fun.addItem(Lang.TEXT["ch"][parent.lang])
@@ -687,8 +731,6 @@ class EvolutionParams(QMainWindow):
         self.input_update_freq.setSingleStep(5)
         self.input_update_freq.setMinimum(1)
         self.input_update_freq.setMaximum(100)
-        #self.input_update_freq.setValidator(QIntValidator(1, 100))
-        #self.input_update_freq.show()
         self.input_update_freq.valueChanged[int].connect(self.changed_update_freq)
         self.input_update_freq_label = QLabel(Lang.TEXT["update_every"][parent.lang]+" 10 %")
         self.form_layout.addRow(self.input_update_freq_label, self.input_update_freq)
@@ -734,6 +776,8 @@ class EvolutionParams(QMainWindow):
         self.max_seed_w = 10
         self.min_seed_l = 1
         self.dir_change_chance = 5
+        self.grow_during_evolution = False
+        self.mutation_chance = 5
 
     def set_input_defaults(self):
         """
@@ -748,7 +792,9 @@ class EvolutionParams(QMainWindow):
         self.input_randomize_colors.setChecked(self.randomize_colors)
         self.input_unique_colors.setChecked(self.unique_colors)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
-        self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.crossover_percentage))
+        self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.mutation_chance))
+        self.input_mutation_chance.setValue(self.mutation_chance)
+        self.input_mutation_chance_label.setText(Lang.TEXT["mutation_chance"][self.parent.lang]+" {} %".format(self.mutation_chance))
         self.input_fitness_fun.setCurrentIndex(self.fitness_fun)
         self.input_pm_amount.setText(str(self.pm_amount))
         self.input_pm_size.setText(str(self.pm_size))
@@ -765,6 +811,7 @@ class EvolutionParams(QMainWindow):
         self.input_max_seed_w.setEnabled(self.evolve_lines)
         self.input_min_seed_l.setEnabled(self.evolve_lines)
         self.input_dir_change_chance.setEnabled(self.evolve_lines)
+        self.input_grow_during_evolution.setEnabled(self.evolve_lines)
 
     def button_set_defaults(self):
         """
@@ -808,12 +855,19 @@ class EvolutionParams(QMainWindow):
         self.input_max_seed_w.setEnabled(self.evolve_lines)
         self.input_min_seed_l.setEnabled(self.evolve_lines)
         self.input_dir_change_chance.setEnabled(self.evolve_lines)
+        self.input_grow_during_evolution.setEnabled(self.evolve_lines)
 
     def changed_elitism(self):
         """
         Toggles elitism variable
         """
         self.elitism = not self.elitism
+
+    def changed_grow_during_evolution(self):
+        """
+        Toggles growing seeds before the evolution variable
+        """
+        self.grow_during_evolution = not self.grow_during_evolution
 
     def changed_fitness_fun(self, v):
         """
@@ -844,11 +898,20 @@ class EvolutionParams(QMainWindow):
 
     def changed_crossover_percentage(self, v):
         """
-        Changes crossover chance
-        :param v Crossover chance
+        Changes crossover ration
+        :param v Crossover percentage
         """
         self.crossover_percentage = v
         self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.crossover_percentage))
+
+    def changed_mutation_chance(self, v):
+        """
+        Changes mutation chance
+        :param v Crossover chance
+        """
+        self.mutation_chance = v
+        self.input_mutation_chance_label.setText(Lang.TEXT["mutation_chance"][self.parent.lang]+" {} %".format(self.mutation_chance))
+
 
     def changed_update_freq(self, v):
         """
@@ -878,14 +941,14 @@ class EvolutionParams(QMainWindow):
         Changes minimum amount of seeds for when seed generation is used
         :param v New minimum amount of seeds
         """
-        self.min_seeds = self.check_input_change(self.input_min_seeds, v, int, 1, self.max_seeds)
+        self.min_seeds = self.check_input_change(self.input_min_seeds, v, int, 0, self.max_seeds)
 
     def changed_max_seeds(self, v):
         """
         Changes maximum amount of seeds for when seed generation is used
         :param v New maximum amount of seeds
         """
-        self.max_seeds = self.check_input_change(self.input_max_seeds, v, int, self.min_seeds, 1000)
+        self.max_seeds = self.check_input_change(self.input_max_seeds, v, int, self.min_seeds if self.min_seeds > 0 else 1, 1000)
 
     def changed_min_seed_w(self, v):
         """
@@ -953,9 +1016,9 @@ def simulate_open(win, file):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    #app.setStyle('Fusion')
+    #app.setStyle('Breeze')
 
-    win = MainWindow(1024, 600)
+    win = MainWindow()
     
     if len(sys.argv) > 1:
         simulate_open(win, sys.argv[1])

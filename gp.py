@@ -13,7 +13,6 @@ from copy import deepcopy
 from abstract_evolution import Lang
 
 
-# TODO: Leave the option to grow seeds continuously as it is now but also add option to evolve them at the start
 class Seed:
     """
     Paint seed, grows on the canvas leaving paint trail
@@ -147,10 +146,7 @@ class Phenotype:
             end_x = x+w//2 if x+w//2 < len(self.arr) else len(self.arr)-1
             start_y = y-w//2 if y-w//2 >= 0 else 0
             end_y = y+w//2 if y+w//2 < len(self.arr[0]) else len(self.arr[0])-1
-            # TODO: Dont continue but fill
-            if end_x-start_x != w or end_y-start_y != w:
-                continue
-            self.arr[start_x:end_x, start_y:end_y] = pixel
+            self.arr[start_x:end_x, start_y:end_y] = pixel[0:end_x-start_x, 0:end_y-start_y]
 
     def grow_seeds(self, dir_change_chance=0.0):
         """
@@ -171,6 +167,18 @@ class Phenotype:
         for _ in range(length):
             self.grow_seeds(dir_change_chance)
             self.paint_seeds()
+
+    def paint_rect(self, x, y, w, h, color):
+        """
+        Draws a rectangle the the phenotype
+        :param x X position
+        :param y Y position
+        :param w Rect width
+        :param h Rect height
+        :param color Rect's color
+        """
+        rect = np.full((w, h, 4), color)
+        self.arr[x:x+w, y:y+h] = rect
 
     def get_seeds(self):
         """
@@ -301,6 +309,16 @@ class Evolution:
             fit += np.sum(np.absolute(np.subtract(p1, p2)))
         return fit
 
+    def grow_seeds(self):
+        """
+        Grows seeds by one step for each but best phenotype if elitism is set
+        """
+        for _, p, i in self.fits:
+            if i == 0 and self.params_window.elitism:
+                continue
+            p.grow_seeds(self.params_window.dir_change_chance)
+            p.paint_seeds() 
+
     def cross2phenos(self, p1, p2):
         """
         Crossovers 2 phenotypes creating a new one
@@ -321,8 +339,6 @@ class Evolution:
         """
         Performs crossovers on phenotypes in population
         """
-        # TODO: Add rotation
-        # TODO: Make other than just rect cuts
         new_phenos = []
         for i in range(int(self.params_window.population_size*(self.params_window.crossover_percentage/100))):
             i2 = randint(0, self.params_window.population_size-1)
@@ -333,6 +349,31 @@ class Evolution:
             if i >= len(new_phenos):
                 break
             self.population.phenotypes[worst[2]] = new_phenos[i]
+
+    def mutate_pheno(self, pheno):
+        """
+        Mutates phenotype
+        """
+        if self.params_window.randomize_colors:
+            # Pick random color
+            pixel = [randint(0, 255), randint(0, 255), randint(0, 255), 255]
+        else:
+            pixel = [x for x in self.ref_img_arr[randint(0, len(self.ref_img_arr)-1)][randint(0, len(self.ref_img_arr[0])-1)]]
+        w = randint(0, len(self.ref_img_arr)-1)
+        h = randint(0, len(self.ref_img_arr[0])-1)
+        x = randint(0, len(self.ref_img_arr)-1-w)
+        y = randint(0, len(self.ref_img_arr[0])-1-h)
+        pheno.paint_rect(x, y, w, h, pixel)
+
+    def mutate(self):
+        """
+        Mutates phenotypes based on mutation chance
+        """
+        for _, p, c in self.fits:
+            if c == 0 and self.params_window.elitism:
+                continue
+            if random.random() <= (self.params_window.mutation_chance/100):
+                self.mutate_pheno(p)
 
     def start_evolution(self):
         """
@@ -349,19 +390,20 @@ class Evolution:
             self.init_fitness_points(self.ref_img_arr, params.pm_amount, params.pm_size, True)
             self.fitness_function = self.fitness_points
 
-        if params.evolve_lines:
+        # Grow seeds before the evolution
+        if params.evolve_lines and not params.grow_during_evolution:
             # Calculate diagonal length
             max_size = (len(self.ref_img_arr)**2 + len(self.ref_img_arr[1])**2)**0.5
             self.population.paint_lines(10, int(max_size), params.dir_change_chance/100)
 
-        # TODO: Add mutation - Random one shape added to the image
-        # TODO: Randomly add one color phenotypes to the population?
-        # TODO: Try incorporating back options for lines as is in lines branch
         # Main loop of evolution
         for iteration in range(params.iterations):
             self.fits = [(self.fitness_function(x.arr, self.ref_img_arr), x, c) for c, x in enumerate(self.population.phenotypes)]
             self.fits.sort(key=lambda x: x[0])
+            self.mutate()
             self.crossover()
+            if params.evolve_lines and params.grow_during_evolution:
+                self.grow_seeds()
             if (iteration+1) % (params.iterations * (params.update_freq/100)) == 0:
                 print("Best fitness: {}".format(self.fits[0][0]))
                 self.display_image(self.fits[0][1].arr)
