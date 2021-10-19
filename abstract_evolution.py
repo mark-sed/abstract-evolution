@@ -7,7 +7,7 @@ generating similar images yet abstract and always unique
 """
 __author__ = "Marek Sedlacek (xsedla1b)"
 __date__ = "September 2021"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __email__ = ("xsedla1b@fit.vutbr.cz", "mr.mareksedlacek@gmail.com")
 
 
@@ -269,18 +269,19 @@ class Lang:
 
 
 # TODO: About menu
-# TODO: Max mutation size?
+# TODO: Display text what's initializing before the evolution start
+# TODO: Section out the parameters windows to make it easier to use
+# TODO: Min/Max mutation size?
 # TODO: Icon/Logo
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Add config file to save info
-# TODO: Add manual as requested in the assignment
+# TODO: Determine the values based on the image size
+# TODO: Add manual to wiki
 # TODO: Add option to continue evolution with more cycles or even load image on which to continue
 # TODO: Use QThread to run evolution so that the GUI does not freez up
 # TODO: Scale up option? Would evolve smaller image and then user could scale it up
 # TODO: Option to save in progress image (maybe even option to automatically save every update)
-# TODO: Install script
-# TODO: MAKE GIT PUBLIC ON RELEASE!!
 class MainWindow(QMainWindow):
     """
     Main program windows
@@ -428,13 +429,13 @@ class MainWindow(QMainWindow):
         self.button_upload_image.hide()
         self.menu_bar.hide()
         # Display the image
-        self.image_label.setPixmap(image)
-        self.image_label.resize(image.width(), image.height())
-        self.image_label.move(5, 5)
-
         self.original_image_label.setPixmap(QPixmap(self.reference_image))
         self.original_image_label.resize(image.width(), image.height())
-        self.original_image_label.move(5+5+image.width(), 5)
+        self.original_image_label.move(5, 5)
+
+        self.image_label.setPixmap(image)
+        self.image_label.resize(image.width(), image.height())
+        self.image_label.move(5+5+image.width(), 5)
         
         # Display save
         # Button will be shown when image is fully rendered
@@ -566,20 +567,12 @@ class AboutWindow(QMainWindow):
         center = QApplication.desktop().screenGeometry(screen).center()
         self.move(center.x() - self.width() // 2, center.y() - self.height() // 2)
 
-        """
-        self.main_text = QLabel(Lang.TEXT["about_text"][parent.lang], self)
-        self.main_text.setOpenExternalLinks(True)
-        self.main_text.setAlignment(Qt.AlignCenter)
-        self.main_text.resize(self.width(), self.height())
-        self.main_text.move(self.width()//2 - self.main_text.width()//2, self.height()//2 - self.main_text.height()//2)
-        #self.main_text.setStyleSheet("QLabel {background-color: red;}")
-        """
         self.text_browser = QTextBrowser(self)
         self.text_browser.resize(self.width(), self.height())
         self.text_browser.setOpenExternalLinks(True)
         #self.text_browser.setObjectName("about_box")
         #self.text_browser.setStyleSheet("padding: 20px; color: red")
-        self.text_browser.append("<div style=\"text-align:center\">Visit <a href=https://github.com/mark-sed/abstract-evolution/wiki>wiki page</a> for more information.</div>")
+        self.text_browser.append("<div style=\"text-align:center\"><h3>Abstract evolution</h3><b>Version: </b>{}<br>Visit <a href=https://github.com/mark-sed/abstract-evolution/wiki>wiki page</a> for more information.</div>".format(__version__))
         self.hide()
 
 
@@ -587,7 +580,6 @@ class EvolutionParams(QMainWindow):
     """
     Window containing sliders and buttons for evolution param settings
     """
-    # TODO: Determine the values based on the image size
 
     def __init__(self, parent=None):
         """
@@ -690,6 +682,7 @@ class EvolutionParams(QMainWindow):
 
         # Elitism
         self.input_elitism = QCheckBox()
+        self.input_elitism.setChecked(True)
         self.input_elitism.toggled.connect(self.changed_elitism)
         self.form_layout.addRow(Lang.TEXT["elitism"][parent.lang], self.input_elitism)
 
@@ -783,27 +776,27 @@ class EvolutionParams(QMainWindow):
         """
         Sets all evolution parameters to their default values
         """
-        self.iterations = 100
-        self.update_freq = 10
-        self.population_size = 10
+        self.iterations = 300
+        self.update_freq = 5
+        self.population_size = 100
         self.randomize_colors = False
         self.unique_colors = False
-        self.elitism = True
         self.crossover_percentage = 50
-        self.fitness_fun = 0
-        self.pm_amount = 100
-        self.pm_size = 3
+        self.fitness_fun = 2
+        self.pm_amount = 200
+        self.pm_size = 2
         self.evolve_lines = False
-        self.max_seeds = 10
-        self.min_seeds = 1
-        self.min_seed_w = 3
-        self.max_seed_w = 10
+        self.max_seeds = 25
+        self.min_seeds = 0
+        self.min_seed_w = 5
+        self.max_seed_w = 40
         self.min_seed_l = 1
         self.dir_change_chance = 5
         self.grow_during_evolution = False
-        self.mutation_chance = 5
+        self.mutation_chance = 8
         self.exact_pm = False
         self.max_color_diff = 30
+        self.elitism = True
 
     def set_input_defaults(self):
         """

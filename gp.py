@@ -386,7 +386,7 @@ class Evolution:
         """
         Mutates phenotypes based on mutation chance
         """
-        for _, p, c in self.fits:
+        for a, p, c in self.fits:
             if c == 0 and self.params_window.elitism:
                 continue
             if random.random() <= (self.params_window.mutation_chance/100):

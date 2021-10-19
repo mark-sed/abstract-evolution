@@ -1,0 +1,6 @@
+# Use pip install -r requirements.txt to install requirements
+numpy==1.21.2
+Pillow==8.4.0
+PyQt5==5.15.5
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.9.0
