@@ -6,13 +6,12 @@ This program takes reference image into which it tries to evolve itself, creatin
 
 The program is quite suited to create other variations of abstract art (might be a good tool to transform your own art).
 
+![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-kandinsky.png?raw=true)  
 ![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0.png?raw=true)  
-![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-kandinsky.png?raw=true)
 
 But it also might be used with photos, where the longer the evolution runs the generally more defined the objects might be (depending on the fitness function - see wiki).
 
-![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-jlaw2.png?raw=true)
-![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-jlaw1.png?raw=true)  
+![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-jlaw1.png?raw=true)
 ![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-jlaw3.png?raw=true)  
 ![Image example 1](https://github.com/mark-sed/abstract-evolution/blob/master/example_outputs/evolved_ae_v0-1-0-vilda.png?raw=true)
 
