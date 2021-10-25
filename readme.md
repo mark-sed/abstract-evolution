@@ -23,7 +23,7 @@ _Randomness plays big part in this, but luck of the draw is there always when it
 
 ## Installation
 
-Download the whole repository (`git clone` or using the download button in GitHub). 
+Download the whole repository - `git clone` or using the download button in GitHub (Green button "Code" -> "Download ZIP"). 
 
 Required Python libraries can be installed using the `install.sh` script (`sh install.sh`) or using `requirements.txt` (`pip install -r requirements.txt`).
 
@@ -61,6 +61,9 @@ The program has currently language support for following languages:
 ## 0.2.0 [WIP]
 _x/x/2021_
 * Changed reference and output image positions to make it more clear what is the output.
+* Added license.
+* Added about text.
+* Minor GUI fixes
 
 ## 0.1.0
 _19/10/2021_

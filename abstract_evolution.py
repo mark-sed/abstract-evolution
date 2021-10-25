@@ -103,11 +103,6 @@ class Lang:
             "en": "Evolution parameters",
             "fr": "Paramètres d'évolution" 
         },
-        "about_text": {
-            "cz": "Tady bude něco o tomto",
-            "en": "Here I'll write all about this\nProgram\nAuthor:\nDate:\nGithub link\nVIN",
-            "fr": "Ici c'est pas pret" 
-        },
         "help": {
             "cz": "Pomoc",
             "en": "Help",
@@ -257,7 +252,37 @@ class Lang:
             "cz": "Maximální barevná odchylka",
             "en": "Maximal color difference",
             "fr": "Différence de couleur maximale" 
+        },
+        "about_text": {
+            "cz": """
+            <div style=\"text-align:center\">
+                <h3>Abstract evolution</h3>
+                <p>Program pro generovaní abstraktního počítačového umění pomocí genetického programování.</p><br>
+                <b>Verze: </b>{}<br>
+                <b>Autor: </b>Marek Sedláček<br>
+                Navštivte <a href=https://github.com/mark-sed/abstract-evolution>GitHub stránky</a> pro nové verze programu.</div>
+                <br><br><small><i>Copyright (c) 2021 Marek Sedláček</i></small>
+            """.format(__version__),
+            "en": """
+            <div style=\"text-align:center\">
+                <h3>Abstract evolution</h3>
+                <p>A program for generating abstract computer art using genetic programming.</p><br>
+                <b>Version: </b>{}<br>
+                <b>Author: </b>Marek Sedlacek<br>
+                Visit <a href=https://github.com/mark-sed/abstract-evolution>GitHub page</a> to check for a new version.</div>
+                <br><br><small><i>Copyright (c) 2021 Marek Sedláček</i></small>
+            """.format(__version__),
+            "fr": """
+            <div style=\"text-align:center\">
+                <h3>Abstract evolution</h3>
+                <p>Un programme pour générer de l'art informatique abstrait en utilisant la programmation génétique.</p><br>
+                <b>Version: </b>{}<br>
+                <b>Auteur: </b>Marek Sedlacek<br>
+                Visitez la <a href=https://github.com/mark-sed/abstract-evolution>page GitHub</a> pour rechercher une nouvelle version.</div>
+                <br><small><i>Copyright (c) 2021 Marek Sedláček</i></small>
+            """.format(__version__), 
         }
+        
     }
     """
     "": {
@@ -269,15 +294,18 @@ class Lang:
 
 
 # TODO: About menu
+# TODO: Test different picture formats and wirte the ones that can be used to the readme
 # TODO: Display text what's initializing before the evolution start
 # TODO: Section out the parameters windows to make it easier to use
 # TODO: Min/Max mutation size?
 # TODO: Icon/Logo
+# TODO: Compile it also to binary
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Add config file to save info
 # TODO: Determine the values based on the image size
-# TODO: Add manual to wiki
+# TODO: Add "quick params" buttons like "Very abstract/More precise" "Fast/Take your time" "Clean/More detailed"
+#       which will set the evolution params to some preset value combination
 # TODO: Add option to continue evolution with more cycles or even load image on which to continue
 # TODO: Use QThread to run evolution so that the GUI does not freez up
 # TODO: Scale up option? Would evolve smaller image and then user could scale it up
@@ -524,6 +552,7 @@ class MainWindow(QMainWindow):
         self.please_wait_label.adjustSize()
         self.mb_file.setTitle(Lang.TEXT["file"][self.lang])
         self.mb_file.adjustSize()
+        self.mb_language.setTitle(Lang.TEXT["language"][self.lang])
         self.button_about.setText(Lang.TEXT["about"][self.lang])
         self.mb_upload_image.setText(Lang.TEXT["upload_image"][self.lang])
         self.mb_evolution_params.setText(Lang.TEXT["evolution_parameters"][self.lang])
@@ -562,7 +591,7 @@ class AboutWindow(QMainWindow):
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMinimizeButtonHint)
         # Center the screen
         self.setWindowTitle(Lang.TEXT["about"][parent.lang])
-        self.setFixedSize(400, 200)
+        self.setFixedSize(400, 210)
         screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
         center = QApplication.desktop().screenGeometry(screen).center()
         self.move(center.x() - self.width() // 2, center.y() - self.height() // 2)
@@ -572,7 +601,7 @@ class AboutWindow(QMainWindow):
         self.text_browser.setOpenExternalLinks(True)
         #self.text_browser.setObjectName("about_box")
         #self.text_browser.setStyleSheet("padding: 20px; color: red")
-        self.text_browser.append("<div style=\"text-align:center\"><h3>Abstract evolution</h3><b>Version: </b>{}<br>Visit <a href=https://github.com/mark-sed/abstract-evolution/wiki>wiki page</a> for more information.</div>".format(__version__))
+        self.text_browser.append(Lang.TEXT["about_text"][parent.lang])
         self.hide()
 
 
@@ -811,7 +840,7 @@ class EvolutionParams(QMainWindow):
         self.input_randomize_colors.setChecked(self.randomize_colors)
         self.input_unique_colors.setChecked(self.unique_colors)
         self.input_crossover_percentage.setValue(self.crossover_percentage)
-        self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.mutation_chance))
+        self.input_crossover_percentage_label.setText(Lang.TEXT["crossover"][self.parent.lang]+" {} %".format(self.crossover_percentage))
         self.input_mutation_chance.setValue(self.mutation_chance)
         self.input_mutation_chance_label.setText(Lang.TEXT["mutation_chance"][self.parent.lang]+" {} %".format(self.mutation_chance))
         self.input_fitness_fun.setCurrentIndex(self.fitness_fun)
