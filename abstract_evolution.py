@@ -7,7 +7,7 @@ generating similar images yet abstract and always unique
 """
 __author__ = "Marek Sedlacek (xsedla1b)"
 __date__ = "September 2021"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __email__ = ("xsedla1b@fit.vutbr.cz", "mr.mareksedlacek@gmail.com")
 
 
@@ -31,11 +31,13 @@ from PyQt5.QtWidgets import (QMainWindow,
                              QComboBox,
                              QWidgetAction,
                              QSizePolicy,
-                             QTextBrowser)
+                             QTextBrowser,
+                             QMessageBox)
 from PyQt5.QtGui import (QPixmap,
                          QIntValidator)
 import webbrowser
 import gp
+import json
 
 
 class Lang:
@@ -57,6 +59,21 @@ class Lang:
             "cz": "Evolvuj znovu",
             "en": "Evolve again",
             "fr": "Évoluer à nouveau" 
+        },
+        "save_params": {
+            "cz": "Uložit konfiguraci",
+            "en": "Save configuration",
+            "fr": "Enregistrer configuration" 
+        },
+        "load_config": {
+            "cz": "Nahrát konfiguraci",
+            "en": "Load configuration",
+            "fr": "Charger configuration" 
+        },
+        "error": {
+            "cz": "Chyba",
+            "en": "Error",
+            "fr": "Erreur" 
         },
         "please_wait": {
             "cz": "In silico evoluce může trvat několik minut...",
@@ -97,6 +114,11 @@ class Lang:
             "cz": "Vyberte obrázek nad kterým provádět evoluci",
             "en": "Select file to evolve into",
             "fr": "Sélectionnez une image pour évoluer vers" 
+        },
+        "select_file": {
+            "cz": "Vyberte konfigurační soubor",
+            "en": "Select a configuration file",
+            "fr": "Sélectionnez un fichier de configuration" 
         },
         "params_window_title": {
             "cz": "Parametry evoluce",
@@ -302,7 +324,6 @@ class Lang:
 # TODO: Compile it also to binary
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
-# TODO: Add config file to save info
 # TODO: Determine the values based on the image size
 # TODO: Add "quick params" buttons like "Very abstract/More precise" "Fast/Take your time" "Clean/More detailed"
 #       which will set the evolution params to some preset value combination
@@ -340,13 +361,20 @@ class MainWindow(QMainWindow):
         self.original_image_label = QLabel(self)
         self.save_image_button = QPushButton(Lang.TEXT["save"][self.lang], self)
         self.save_image_button.pressed.connect(self.save_image)
+        self.save_image_button.adjustSize()
         self.save_image_button.hide()
+        self.save_params_button = QPushButton(Lang.TEXT["save_params"][self.lang], self)
+        self.save_params_button.pressed.connect(self.save_params)
+        self.save_params_button.adjustSize()
+        self.save_params_button.hide()
         self.current_displyed_image = None
         self.evolve_another_button = QPushButton(Lang.TEXT["evolve_new"][self.lang], self)
         self.evolve_another_button.pressed.connect(self.evolve_new)
+        self.evolve_another_button.adjustSize()
         self.evolve_another_button.hide()
         self.evolve_again_button = QPushButton(Lang.TEXT["evolve_again"][self.lang], self)
         self.evolve_again_button.pressed.connect(self.evolve_again)
+        self.evolve_again_button.adjustSize()
         self.evolve_again_button.hide()
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setGeometry(0, 0, 400, 25)
@@ -435,7 +463,7 @@ class MainWindow(QMainWindow):
         """
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,Lang.TEXT["select_image"][self.lang], "","Images (*.png *.jpg *.jpeg);;All Files (*)", options=options)
+        fileName, _ = QFileDialog.getOpenFileName(self, Lang.TEXT["select_image"][self.lang], "","Images (*.png *.jpg *.jpeg);;All Files (*)", options=options)
         if fileName:
             self.reference_image = fileName
             self.evolution_params.show()
@@ -470,12 +498,16 @@ class MainWindow(QMainWindow):
         self.save_image_button.move(self.width() - self.save_image_button.width() - 5,
                                     self.height() - self.save_image_button.height() - 5)
 
+        # Display save params
+        self.save_params_button.move(self.width() - self.save_image_button.width() - 5*2 - self.save_params_button.width(),
+                                      self.height() - self.save_image_button.height() - 5)
+
         # Display evolve again
-        self.evolve_again_button.move(self.width() - self.save_image_button.width() - 5*2 - self.evolve_again_button.width(),
+        self.evolve_again_button.move(self.width() - self.save_image_button.width() - 5*3 - self.evolve_again_button.width() - self.save_params_button.width(),
                                       self.height() - self.save_image_button.height() - 5)
 
         # Display evolve new
-        self.evolve_another_button.move(self.width() - self.save_image_button.width() - 5*3 - self.evolve_again_button.width() - self.evolve_another_button.width(),
+        self.evolve_another_button.move(self.width() - self.save_image_button.width() - 5*4 - self.evolve_again_button.width() - self.save_params_button.width() - self.evolve_another_button.width(),
                                         self.height() - self.save_image_button.height() - 5)
 
         self.progress_bar.setGeometry(5, self.evolve_another_button.y()+2, self.evolve_another_button.x()-10, self.evolve_another_button.height()-4)
@@ -494,12 +526,14 @@ class MainWindow(QMainWindow):
             self.progress_bar.setValue(100)
             self.progress_bar.setFormat(v)
             self.save_image_button.show()
+            self.save_params_button.show()
             self.evolve_again_button.show()
             self.evolve_another_button.show()
         else:
             self.please_wait_label.show()
             self.progress_bar.setValue(v)
             self.save_image_button.hide()
+            self.save_params_button.hide()
             self.evolve_again_button.hide()
             self.evolve_another_button.hide()
             self.progress_bar.setFormat("%p%")
@@ -511,9 +545,17 @@ class MainWindow(QMainWindow):
         """
         Opens dialog window to save and image (path is passed to evolution_params)
         """
-        name, _ = QFileDialog.getSaveFileName(self, 'Save image', "evolved-painting.png")
+        name, _ = QFileDialog.getSaveFileName(self, Lang.TEXT["save"][self.lang], "evolved-painting.png")
         if name is not None and len(name) > 0:
             self.evolution_params.curr_evolution.save_image(name)
+
+    def save_params(self):
+        """
+        Saves current evolution parameters to a config file
+        """
+        name, _ = QFileDialog.getSaveFileName(self, Lang.TEXT["save_params"][self.lang], "evolution-params.json")
+        if name is not None and len(name) > 0:
+            self.evolution_params.save_params(name)
 
     def evolution_running(self):
         """
@@ -544,6 +586,8 @@ class MainWindow(QMainWindow):
         # Update text
         self.save_image_button.setText(Lang.TEXT["save"][self.lang])
         self.save_image_button.adjustSize()
+        self.save_params_button.setText(Lang.TEXT["save_params"][self.lang])
+        self.save_params_button.adjustSize()
         self.evolve_another_button.setText(Lang.TEXT["evolve_new"][self.lang])
         self.evolve_another_button.adjustSize()
         self.evolve_again_button.setText(Lang.TEXT["evolve_again"][self.lang])
@@ -784,6 +828,11 @@ class EvolutionParams(QMainWindow):
         # Set values
         self.set_input_defaults()
 
+        # Load config
+        self.load_button = QPushButton(Lang.TEXT["load_config"][parent.lang], self)
+        self.load_button.pressed.connect(self.load_params)
+        self.form_layout.addRow(self.load_button)
+
         # Set defaults
         self.defaults_button = QPushButton(Lang.TEXT["set_defaults"][parent.lang], self)
         self.defaults_button.pressed.connect(self.button_set_defaults)
@@ -864,6 +913,84 @@ class EvolutionParams(QMainWindow):
         self.input_max_color_diff.setText(str(self.max_color_diff))
         self.input_max_color_diff.setEnabled(self.exact_pm)
 
+    def save_params(self, name):
+        """
+        Saves current evolution parameters to a file
+        """
+        params_dict = {}
+        params_dict["iterations"] = self.iterations
+        params_dict["update_freq"] = self.update_freq
+        params_dict["population_size"] = self.population_size
+        params_dict["randomize_colors"] = self.randomize_colors
+        params_dict["unique_colors"] = self.unique_colors
+        params_dict["crossover_percentage"] = self.crossover_percentage
+        params_dict["fitness_fun"] = self.fitness_fun
+        params_dict["pm_amount"] = self.pm_amount
+        params_dict["pm_size"] = self.pm_size
+        params_dict["evolve_lines"] = self.evolve_lines
+        params_dict["max_seeds"] = self.max_seeds
+        params_dict["min_seeds"] = self.min_seeds
+        params_dict["min_seed_w"] = self.min_seed_w
+        params_dict["max_seed_w"] = self.max_seed_w
+        params_dict["min_seed_l"] = self.min_seed_l
+        params_dict["dir_change_chance"] = self.dir_change_chance
+        params_dict["grow_during_evolution"] = self.grow_during_evolution
+        params_dict["mutation_chance"] = self.mutation_chance
+        params_dict["exact_pm"] = self.exact_pm
+        params_dict["max_color_diff"] = self.max_color_diff
+        params_dict["elitism"] = self.elitism
+        params_json = json.dumps(params_dict)
+        with open(name, "w") as out_json:
+            out_json.write(params_json)
+
+    def load_params(self):
+        """
+        Loads json configuration from a file
+        """
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        name, _ = QFileDialog.getOpenFileName(self, Lang.TEXT["select_file"][self.parent.lang], "","JSON (*.json);;All Files (*)", options=options)
+        if name is None or len(name) == 0:
+            return
+
+        params_dict = {}
+        try:
+            json_params = ""
+            with open(name, "r") as in_json:
+                json_params = in_json.read()
+            params_dict = json.loads(json_params)
+
+            self.iterations = params_dict["iterations"]
+            self.update_freq = params_dict["update_freq"]
+            self.population_size = params_dict["population_size"]
+            self.randomize_colors = params_dict["randomize_colors"]
+            self.unique_colors = params_dict["unique_colors"]
+            self.crossover_percentage = params_dict["crossover_percentage"]
+            self.fitness_fun = params_dict["fitness_fun"]
+            self.pm_amount = params_dict["pm_amount"]
+            self.pm_size = params_dict["pm_size"]
+            self.evolve_lines = params_dict["evolve_lines"]
+            self.max_seeds = params_dict["max_seeds"]
+            self.min_seeds = params_dict["min_seeds"]
+            self.min_seed_w = params_dict["min_seed_w"]
+            self.max_seed_w = params_dict["max_seed_w"]
+            self.min_seed_l = params_dict["min_seed_l"]
+            self.dir_change_chance = params_dict["dir_change_chance"]
+            self.grow_during_evolution = params_dict["grow_during_evolution"]
+            self.mutation_chance = params_dict["mutation_chance"]
+            self.exact_pm = params_dict["exact_pm"]
+            self.max_color_diff = params_dict["max_color_diff"]
+            self.elitism = params_dict["elitism"]
+            self.set_input_defaults()
+        except Exception as e:
+            error_msg = QMessageBox()
+            error_msg.setIcon(QMessageBox.Critical)
+            error_msg.setWindowTitle(Lang.TEXT["error"][self.parent.lang])
+            error_msg.setText(repr(e))
+            error_msg.setStandardButtons(QMessageBox.Close)
+            error_msg.exec()
+        self.set_input_defaults()
+
     def button_set_defaults(self):
         """
         Sets default evolution parameters and updates GUI to these values
@@ -887,19 +1014,19 @@ class EvolutionParams(QMainWindow):
         """
         Toggles randomize colors variable
         """
-        self.randomize_colors = not self.randomize_colors
+        self.randomize_colors = self.input_randomize_colors.isChecked()
 
     def changed_unique_colors(self):
         """
         Toggles unique colors variable
         """
-        self.unique_colors = not self.unique_colors
+        self.unique_colors = self.input_unique_colors.isChecked()
 
     def changed_evolve_lines(self):
         """
         Toggles evolve lines variable
         """
-        self.evolve_lines = not self.evolve_lines
+        self.evolve_lines = self.input_evolve_lines.isChecked()
         self.input_min_seeds.setEnabled(self.evolve_lines)
         self.input_max_seeds.setEnabled(self.evolve_lines)
         self.input_min_seed_w.setEnabled(self.evolve_lines)
@@ -912,13 +1039,13 @@ class EvolutionParams(QMainWindow):
         """
         Toggles elitism variable
         """
-        self.elitism = not self.elitism
+        self.elitism = self.elitism.isChecked()
 
     def changed_grow_during_evolution(self):
         """
         Toggles growing seeds before the evolution variable
         """
-        self.grow_during_evolution = not self.grow_during_evolution
+        self.grow_during_evolution = self.input_grow_during_evolution.isChecked()
 
     def changed_fitness_fun(self, v):
         """
@@ -936,7 +1063,7 @@ class EvolutionParams(QMainWindow):
         """
         Toggles exact color point match
         """
-        self.exact_pm = not self.exact_pm
+        self.exact_pm = self.input_exact_pm.isChecked()
         self.input_max_color_diff.setEnabled(self.exact_pm)
 
     def changed_max_color_diff(self, v):
