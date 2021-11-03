@@ -1,4 +1,4 @@
-<img align="left" width="40" height="40" src="https://raw.githubusercontent.com/mark-sed/abstract-evolution/master/icon.png" alt="Icon">
+<img align="left" width="80" height="80" src="https://raw.githubusercontent.com/mark-sed/abstract-evolution/master/icon.png" alt="Icon">
 
 # Abstract Evolution
 
