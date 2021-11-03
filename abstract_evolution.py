@@ -345,7 +345,7 @@ class Lang:
     """
 
 
-# TODO: About menu
+# TODO: Add stop evolution button
 # TODO: Test different picture formats and wirte the ones that can be used to the readme
 # TODO: Display text what's initializing before the evolution start
 # TODO: Section out the parameters windows to make it easier to use
@@ -355,8 +355,6 @@ class Lang:
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Determine the values based on the image size
-# TODO: Add "quick params" buttons like "Very abstract/More precise" "Fast/Take your time" "Clean/More detailed"
-#       which will set the evolution params to some preset value combination
 # TODO: Add option to continue evolution with more cycles or even load image on which to continue
 # TODO: Use QThread to run evolution so that the GUI does not freez up
 # TODO: Scale up option? Would evolve smaller image and then user could scale it up
@@ -378,6 +376,7 @@ class MainWindow(QMainWindow):
         """
         super(MainWindow, self).__init__()
         MainWindow.INSTANCES_CREATED += 1
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.lang = lang
         self.setFixedSize(width, height)
         # Center the screen
@@ -495,7 +494,9 @@ class MainWindow(QMainWindow):
         self.abstraction_slider_label2.move(self.abstraction_slider.x()+self.abstraction_slider.width()+10,
                                             self.abstraction_slider.y()+5)
 
-        self.abstraction_slider.setValue(50)
+        self.value_abstraction = 42
+        self.abstraction_slider.setValue(self.value_abstraction)
+        self.abstraction_slider.valueChanged[int].connect(self.changed_abstraction_slider)
 
         # Speed 
         self.speed_slider = QSlider(Qt.Horizontal, self)
@@ -512,7 +513,9 @@ class MainWindow(QMainWindow):
         self.speed_slider_label2.move(self.speed_slider.x()+self.speed_slider.width()+10,
                                             self.speed_slider.y()+5)
         
-        self.speed_slider.setValue(50)
+        self.value_speed = 35
+        self.speed_slider.setValue(self.value_speed)
+        self.speed_slider.valueChanged[int].connect(self.changed_speed_slider)
 
         # Title for slider
         self.sliders_label = QLabel(Lang.TEXT["sliders_title"][self.lang], self)
@@ -531,6 +534,7 @@ class MainWindow(QMainWindow):
         self.show_advanced_params_label.move(self.show_advanced_params.x() + 20,
                                              self.show_advanced_params.y() + 5)
         
+        self.evolution_params.quick_params_update(self.value_abstraction, self.value_speed)
         # Hide progress
         self.progress_bar.hide()
         self.please_wait_label.hide()
@@ -626,7 +630,7 @@ class MainWindow(QMainWindow):
             self.save_params_button.hide()
             self.evolve_again_button.hide()
             self.evolve_another_button.hide()
-            self.progress_bar.setFormat("%p%")
+            self.progress_bar.setFormat("%p %")
         self.please_wait_label.repaint()
         self.progress_bar.show()
         
@@ -717,6 +721,22 @@ class MainWindow(QMainWindow):
         self.about_window.hide()
         self.about_window = AboutWindow(self)
 
+    def changed_abstraction_slider(self, v):
+        """
+        Abstraction slider event handler
+        :param v New value
+        """
+        self.value_abstraction = v 
+        self.evolution_params.quick_params_update(self.value_abstraction, self.value_speed)
+
+    def changed_speed_slider(self, v):
+        """
+        Speed slider event handler
+        :param v New value
+        """
+        self.value_speed = v
+        self.evolution_params.quick_params_update(self.value_abstraction, self.value_speed)
+
     def show_about(self):
         """
         Displays "About" window
@@ -757,27 +777,6 @@ class AboutWindow(QMainWindow):
         #self.text_browser.setStyleSheet("padding: 20px; color: red")
         self.text_browser.append(Lang.TEXT["about_text"][parent.lang])
         self.hide()
-
-"""
-class SimpleParams(QMainWindow):
-    \"""
-    Simplified version of EvolutionParams
-    \"""
-
-    def __init__(self, parent=None):
-        \"""
-        :param parent Creator of this window
-        \"""
-        super(SimpleParams, self).__init__(parent)
-        self.parent = parent
-        self.setWindowTitle(Lang.TEXT["params_window_title"][parent.lang])
-        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMaximizeButtonHint)
-        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowMinimizeButtonHint)
-
-        # Input form
-        self.form_layout = QFormLayout()
-"""
-
 
 class EvolutionParams(QMainWindow):
     """
@@ -1121,6 +1120,62 @@ class EvolutionParams(QMainWindow):
             error_msg.exec()
         self.set_input_defaults()
 
+    def quick_params_update(self, abstraction, speed):
+        """
+        Mapping function 
+        """ 
+        f_abstraction = abstraction / 100.0
+        f_speed = speed / 100.0
+
+        self.iterations = 100 + int(1800.0 * f_speed) + int(500.0 * f_abstraction)
+        self.update_freq = 1
+        self.population_size = 30 + int(300.0 * f_speed) + int(50.0 * f_speed)
+        self.randomize_colors = abstraction < 20
+        self.unique_colors = abstraction > 50
+        self.crossover_percentage = int((f_abstraction + 0.1)*100)
+        if self.crossover_percentage > 100:
+            self.crossover_percentage = 100
+        
+        if abstraction < 33:
+            self.fitness_fun = 0
+        elif abstraction < 66:
+            self.fitness_fun = 1
+        else:
+            self.fitness_fun = 2
+        
+        if self.fitness_fun == 0:
+            self.exact_pm = False
+        else:
+            self.exact_pm = abstraction > 60
+
+        self.pm_amount = 100 + int(700 * f_speed) + int(200 * f_abstraction)
+        self.pm_size = 1
+        if speed > 35:
+            self.pm_size += 1
+        if speed > 70:
+            self.pm_size += 1
+        if abstraction > 70:
+            self.pm_size += 1
+        
+        self.evolve_lines = abstraction < 45
+        self.max_seeds = int(200 * (1.0 - f_abstraction) + 1)
+        self.min_seeds = int(130 * (1.0 - f_abstraction))
+        self.max_seed_w = int(150 * (f_abstraction) + 5)
+        self.min_seed_w = int(50 * (f_abstraction) + 1)
+        self.min_seed_l = 1 
+        self.dir_change_chance = int((1.0 - f_abstraction)*100)
+        self.grow_during_evolution = abstraction < 15
+        self.mutation_chance = int(100*(f_abstraction / 2.0))
+        
+        if speed < 8:
+            self.max_color_diff = 0
+        else:
+            self.max_color_diff = int(65 * (1.0 - f_abstraction))
+        
+        self.elitism = abstraction > 3
+
+        self.set_input_defaults()
+
     def button_set_defaults(self):
         """
         Sets default evolution parameters and updates GUI to these values
@@ -1169,7 +1224,7 @@ class EvolutionParams(QMainWindow):
         """
         Toggles elitism variable
         """
-        self.elitism = self.elitism.isChecked()
+        self.elitism = self.input_elitism.isChecked()
 
     def changed_grow_during_evolution(self):
         """
