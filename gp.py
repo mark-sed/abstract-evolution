@@ -425,7 +425,7 @@ class Evolution:
                 print("Best fitness: {}".format(self.fits[0][0]))
                 self.display_image(self.fits[0][1].arr)
                 params.parent.repaint()
-            params.parent.update_progress(int(iteration/params.iterations*100))
+            params.parent.update_progress(int((iteration+1)/params.iterations*100))
         
         params.parent.update_progress(Lang.TEXT["finished"][params.parent.lang])
         self.best_arr = self.fits[0][1].arr

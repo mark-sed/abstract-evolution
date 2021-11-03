@@ -494,7 +494,7 @@ class MainWindow(QMainWindow):
         self.abstraction_slider_label2.move(self.abstraction_slider.x()+self.abstraction_slider.width()+10,
                                             self.abstraction_slider.y()+5)
 
-        self.value_abstraction = 42
+        self.value_abstraction = 72
         self.abstraction_slider.setValue(self.value_abstraction)
         self.abstraction_slider.valueChanged[int].connect(self.changed_abstraction_slider)
 
@@ -513,7 +513,7 @@ class MainWindow(QMainWindow):
         self.speed_slider_label2.move(self.speed_slider.x()+self.speed_slider.width()+10,
                                             self.speed_slider.y()+5)
         
-        self.value_speed = 35
+        self.value_speed = 25
         self.speed_slider.setValue(self.value_speed)
         self.speed_slider.valueChanged[int].connect(self.changed_speed_slider)
 
@@ -1127,7 +1127,7 @@ class EvolutionParams(QMainWindow):
         f_abstraction = abstraction / 100.0
         f_speed = speed / 100.0
 
-        self.iterations = 100 + int(1800.0 * f_speed) + int(500.0 * f_abstraction)
+        self.iterations = 100 + int(1500.0 * f_speed) + int(500.0 * f_abstraction)
         self.update_freq = 1
         self.population_size = 30 + int(300.0 * f_speed) + int(50.0 * f_speed)
         self.randomize_colors = abstraction < 20
@@ -1148,7 +1148,7 @@ class EvolutionParams(QMainWindow):
         else:
             self.exact_pm = abstraction > 60
 
-        self.pm_amount = 100 + int(700 * f_speed) + int(200 * f_abstraction)
+        self.pm_amount = 100 + int(500 * f_speed) + int(80 * f_abstraction)
         self.pm_size = 1
         if speed > 35:
             self.pm_size += 1
