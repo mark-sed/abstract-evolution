@@ -275,6 +275,36 @@ class Lang:
             "en": "Maximal color difference",
             "fr": "Différence de couleur maximale" 
         },
+        "abstract": {
+            "cz": "Abstraktní",
+            "en": "Abstract",
+            "fr": "Abstrait" 
+        },
+        "detailed": {
+            "cz": "Detailní",
+            "en": "Detailed",
+            "fr": "Détaillé" 
+        },
+        "rushed": {
+            "cz": "Uspěchané",
+            "en": "Rushed",
+            "fr": "Précipité" 
+        },
+        "developed": {
+            "cz": "Rozvinuté",
+            "en": "Developed",
+            "fr": "Développé" 
+        },
+        "sliders_title": {
+            "cz": "Rychlé nastavení parametrů",
+            "en": "Quick parameters setup",
+            "fr": "Paramétrage rapide" 
+        },
+        "show_advanced": {
+            "cz": "Ukaž pokročilé nastavení parametrů",
+            "en": "Show advanced parameters",
+            "fr": "Afficher les paramètres avancés" 
+        },
         "about_text": {
             "cz": """
             <div style=\"text-align:center\">
@@ -315,7 +345,7 @@ class Lang:
     """
 
 
-# TODO: About menu
+# TODO: Add stop evolution button
 # TODO: Test different picture formats and wirte the ones that can be used to the readme
 # TODO: Display text what's initializing before the evolution start
 # TODO: Section out the parameters windows to make it easier to use
@@ -325,8 +355,6 @@ class Lang:
 # TODO: Add (?) mouseover to params so people know what it does and if more or less is better
 # TODO: Add to pip
 # TODO: Determine the values based on the image size
-# TODO: Add "quick params" buttons like "Very abstract/More precise" "Fast/Take your time" "Clean/More detailed"
-#       which will set the evolution params to some preset value combination
 # TODO: Add option to continue evolution with more cycles or even load image on which to continue
 # TODO: Use QThread to run evolution so that the GUI does not freez up
 # TODO: Scale up option? Would evolve smaller image and then user could scale it up
@@ -348,6 +376,7 @@ class MainWindow(QMainWindow):
         """
         super(MainWindow, self).__init__()
         MainWindow.INSTANCES_CREATED += 1
+        self.setWindowIcon(QtGui.QIcon('icon.png'))
         self.lang = lang
         self.setFixedSize(width, height)
         # Center the screen
@@ -378,7 +407,7 @@ class MainWindow(QMainWindow):
         self.evolve_again_button.hide()
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setGeometry(0, 0, 400, 25)
-        self.progress_bar.move(self.width()//2-self.progress_bar.width()//2, self.height()-200)
+        self.progress_bar.move(self.width()//2-self.progress_bar.width()//2, self.height()-180)
         self.please_wait_label = QLabel(Lang.TEXT["please_wait"][self.lang], self)
         self.please_wait_label.adjustSize()
         self.please_wait_label.move(self.width()//2-self.please_wait_label.width()//2, 
@@ -447,9 +476,65 @@ class MainWindow(QMainWindow):
         self.button_upload_image = QPushButton(Lang.TEXT["upload_image"][self.lang], self)
         self.button_upload_image.resize(200, 50)
         self.button_upload_image.move(self.width() // 2 - self.button_upload_image.width() // 2,
-                                      self.height() // 2 - self.button_upload_image.height() // 2)
+                                      self.height() // 2 - self.button_upload_image.height() // 2 + 50)
         self.button_upload_image.pressed.connect(self.upload_image)
 
+        # Params sliders
+        self.abstraction_slider = QSlider(Qt.Horizontal, self)
+        self.abstraction_slider.move(self.button_upload_image.x()+5, self.button_upload_image.y() - 50)
+        self.abstraction_slider.resize(self.button_upload_image.width()-10, 30)
+
+        self.abstraction_slider_label = QLabel(Lang.TEXT["abstract"][self.lang], self)
+        self.abstraction_slider_label.adjustSize()
+        self.abstraction_slider_label.move(self.abstraction_slider.x()-self.abstraction_slider_label.width()-10,
+                                            self.abstraction_slider.y()+5)
+
+        self.abstraction_slider_label2 = QLabel(Lang.TEXT["detailed"][self.lang], self)
+        self.abstraction_slider_label2.adjustSize()
+        self.abstraction_slider_label2.move(self.abstraction_slider.x()+self.abstraction_slider.width()+10,
+                                            self.abstraction_slider.y()+5)
+
+        self.value_abstraction = 72
+        self.abstraction_slider.setValue(self.value_abstraction)
+        self.abstraction_slider.valueChanged[int].connect(self.changed_abstraction_slider)
+
+        # Speed 
+        self.speed_slider = QSlider(Qt.Horizontal, self)
+        self.speed_slider.move(self.button_upload_image.x()+5, self.abstraction_slider.y() - 30)
+        self.speed_slider.resize(self.button_upload_image.width()-10, 30)
+
+        self.speed_slider_label = QLabel(Lang.TEXT["rushed"][self.lang], self)
+        self.speed_slider_label.adjustSize()
+        self.speed_slider_label.move(self.speed_slider.x()-self.speed_slider_label.width()-10,
+                                            self.speed_slider.y()+5)
+
+        self.speed_slider_label2 = QLabel(Lang.TEXT["developed"][self.lang], self)
+        self.speed_slider_label2.adjustSize()
+        self.speed_slider_label2.move(self.speed_slider.x()+self.speed_slider.width()+10,
+                                            self.speed_slider.y()+5)
+        
+        self.value_speed = 25
+        self.speed_slider.setValue(self.value_speed)
+        self.speed_slider.valueChanged[int].connect(self.changed_speed_slider)
+
+        # Title for slider
+        self.sliders_label = QLabel(Lang.TEXT["sliders_title"][self.lang], self)
+        self.sliders_label.setStyleSheet("font-size: 28px")
+        self.sliders_label.adjustSize()
+        self.sliders_label.move(self.width() // 2 - self.sliders_label.width() // 2, self.speed_slider.y()-60)
+
+        # Show advanced
+        self.show_advanced_params = QCheckBox(self)
+        self.show_advanced_params.move(15, self.height() - 40)
+        self.show_advanced_params.setChecked(True)
+        
+        self.show_advanced_params_label = QLabel(Lang.TEXT["show_advanced"][self.lang], self)
+        self.show_advanced_params_label.setStyleSheet("color: #333333")
+        self.show_advanced_params_label.adjustSize()
+        self.show_advanced_params_label.move(self.show_advanced_params.x() + 20,
+                                             self.show_advanced_params.y() + 5)
+        
+        self.evolution_params.quick_params_update(self.value_abstraction, self.value_speed)
         # Hide progress
         self.progress_bar.hide()
         self.please_wait_label.hide()
@@ -484,6 +569,15 @@ class MainWindow(QMainWindow):
         # Hide extra gui
         self.button_upload_image.hide()
         self.menu_bar.hide()
+        self.show_advanced_params_label.hide()
+        self.show_advanced_params.hide()
+        self.sliders_label.hide()
+        self.speed_slider.hide()
+        self.speed_slider_label.hide()
+        self.speed_slider_label2.hide()
+        self.abstraction_slider.hide()
+        self.abstraction_slider_label.hide()
+        self.abstraction_slider_label2.hide()
         # Display the image
         self.original_image_label.setPixmap(QPixmap(self.reference_image))
         self.original_image_label.resize(image.width(), image.height())
@@ -536,7 +630,7 @@ class MainWindow(QMainWindow):
             self.save_params_button.hide()
             self.evolve_again_button.hide()
             self.evolve_another_button.hide()
-            self.progress_bar.setFormat("%p%")
+            self.progress_bar.setFormat("%p %")
         self.please_wait_label.repaint()
         self.progress_bar.show()
         
@@ -566,6 +660,9 @@ class MainWindow(QMainWindow):
         self.mb_language.setEnabled(False)
         self.button_about.setEnabled(False)
         self.button_help.setEnabled(False)
+        self.speed_slider.setEnabled(False)
+        self.abstraction_slider.setEnabled(False)
+        self.show_advanced_params.setEnabled(False)
 
     def evolve_new(self):
         """
@@ -602,10 +699,43 @@ class MainWindow(QMainWindow):
         self.mb_evolution_params.setText(Lang.TEXT["evolution_parameters"][self.lang])
         self.mb_quit.setText(Lang.TEXT["quit"][self.lang])
         self.button_upload_image.setText(Lang.TEXT["upload_image"][self.lang])
+        self.show_advanced_params_label.setText(Lang.TEXT["show_advanced"][self.lang])
+        self.show_advanced_params_label.adjustSize()
+        self.sliders_label.setText(Lang.TEXT["sliders_title"][self.lang])
+        self.sliders_label.adjustSize()
+        self.sliders_label.move(self.width() // 2 - self.sliders_label.width() // 2, self.speed_slider.y()-60)
+        self.speed_slider_label2.setText(Lang.TEXT["developed"][self.lang])
+        self.speed_slider_label2.adjustSize()
+        self.speed_slider_label.setText(Lang.TEXT["rushed"][self.lang])
+        self.speed_slider_label.adjustSize()
+        self.speed_slider_label.move(self.speed_slider.x()-self.speed_slider_label.width()-10,
+                                            self.speed_slider.y()+5)
+        self.abstraction_slider_label2.setText(Lang.TEXT["detailed"][self.lang])
+        self.abstraction_slider_label2.adjustSize()
+        self.abstraction_slider_label.setText(Lang.TEXT["abstract"][self.lang])
+        self.abstraction_slider_label.adjustSize()
+        self.abstraction_slider_label.move(self.abstraction_slider.x()-self.abstraction_slider_label.width()-10,
+                                            self.abstraction_slider.y()+5)
         self.evolution_params.hide()
         self.evolution_params = EvolutionParams(self)
         self.about_window.hide()
         self.about_window = AboutWindow(self)
+
+    def changed_abstraction_slider(self, v):
+        """
+        Abstraction slider event handler
+        :param v New value
+        """
+        self.value_abstraction = v 
+        self.evolution_params.quick_params_update(self.value_abstraction, self.value_speed)
+
+    def changed_speed_slider(self, v):
+        """
+        Speed slider event handler
+        :param v New value
+        """
+        self.value_speed = v
+        self.evolution_params.quick_params_update(self.value_abstraction, self.value_speed)
 
     def show_about(self):
         """
@@ -647,7 +777,6 @@ class AboutWindow(QMainWindow):
         #self.text_browser.setStyleSheet("padding: 20px; color: red")
         self.text_browser.append(Lang.TEXT["about_text"][parent.lang])
         self.hide()
-
 
 class EvolutionParams(QMainWindow):
     """
@@ -841,7 +970,7 @@ class EvolutionParams(QMainWindow):
         # Ok button
         self.start_evolution_button = QPushButton(Lang.TEXT["start_evolution"][parent.lang], self)
         self.start_evolution_button.pressed.connect(self.start_evolution_pressed)
-        self.start_evolution_button.setStyleSheet("font-weight: bold;")
+        self.start_evolution_button.setStyleSheet("font-weight: bold; height: 50px")
         self.form_layout.addRow(self.start_evolution_button)
 
         wid = QtWidgets.QWidget(self)
@@ -991,6 +1120,62 @@ class EvolutionParams(QMainWindow):
             error_msg.exec()
         self.set_input_defaults()
 
+    def quick_params_update(self, abstraction, speed):
+        """
+        Mapping function 
+        """ 
+        f_abstraction = abstraction / 100.0
+        f_speed = speed / 100.0
+
+        self.iterations = 100 + int(1500.0 * f_speed) + int(500.0 * f_abstraction)
+        self.update_freq = 1
+        self.population_size = 30 + int(300.0 * f_speed) + int(50.0 * f_speed)
+        self.randomize_colors = abstraction < 20
+        self.unique_colors = abstraction > 50
+        self.crossover_percentage = int((f_abstraction + 0.1)*100)
+        if self.crossover_percentage > 100:
+            self.crossover_percentage = 100
+        
+        if abstraction < 33:
+            self.fitness_fun = 0
+        elif abstraction < 66:
+            self.fitness_fun = 1
+        else:
+            self.fitness_fun = 2
+        
+        if self.fitness_fun == 0:
+            self.exact_pm = False
+        else:
+            self.exact_pm = abstraction > 60
+
+        self.pm_amount = 100 + int(500 * f_speed) + int(80 * f_abstraction)
+        self.pm_size = 1
+        if speed > 35:
+            self.pm_size += 1
+        if speed > 70:
+            self.pm_size += 1
+        if abstraction > 70:
+            self.pm_size += 1
+        
+        self.evolve_lines = abstraction < 45
+        self.max_seeds = int(200 * (1.0 - f_abstraction) + 1)
+        self.min_seeds = int(130 * (1.0 - f_abstraction))
+        self.max_seed_w = int(150 * (f_abstraction) + 5)
+        self.min_seed_w = int(50 * (f_abstraction) + 1)
+        self.min_seed_l = 1 
+        self.dir_change_chance = int((1.0 - f_abstraction)*100)
+        self.grow_during_evolution = abstraction < 15
+        self.mutation_chance = int(100*(f_abstraction / 2.0))
+        
+        if speed < 8:
+            self.max_color_diff = 0
+        else:
+            self.max_color_diff = int(65 * (1.0 - f_abstraction))
+        
+        self.elitism = abstraction > 3
+
+        self.set_input_defaults()
+
     def button_set_defaults(self):
         """
         Sets default evolution parameters and updates GUI to these values
@@ -1039,7 +1224,7 @@ class EvolutionParams(QMainWindow):
         """
         Toggles elitism variable
         """
-        self.elitism = self.elitism.isChecked()
+        self.elitism = self.input_elitism.isChecked()
 
     def changed_grow_during_evolution(self):
         """
